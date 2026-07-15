@@ -1,0 +1,39 @@
+﻿name: Feature request
+description: Propose a change that fits local-first and store-safe constraints
+title: "[feat]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Feature ideas must respect legal constraints: no YouTube downloaders; store-safe lyrics only.
+        See CONTRIBUTING.md and STATUS.md.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user problem does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: Desired behavior and rough approach
+    validations:
+      required: true
+  - type: checkboxes
+    id: legal
+    attributes:
+      label: Legal fit
+      options:
+        - label: Does not add YouTube/stream downloading or proprietary lyric scrapers
+          required: true
+        - label: Stays local-first (no silent cloud inference)
+          required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false

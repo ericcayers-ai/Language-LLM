@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+target/
+.wxt/
+.output/
+*.tsbuildinfo
+
+# Models / weights (download locally; never commit binary weights)
+models/weights/
+*.gguf
+*.bin
+*.onnx
+*.pt
+*.safetensors
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Test / coverage
+coverage/
+.vitest/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*

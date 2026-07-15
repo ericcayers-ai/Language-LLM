@@ -1,0 +1,57 @@
+﻿name: Bug report
+description: Report broken behavior in Language-LLM
+title: "[bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. Search existing issues first. Attach `pnpm verify` output when relevant.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What went wrong in one or two sentences?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps, expected vs actual
+      placeholder: |
+        1. …
+        2. …
+        Expected:
+        Actual:
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Surface
+      options:
+        - Extension (YouTube / overlay)
+        - Extension (page translate)
+        - Extension (lyrics / learning / dictionaries)
+        - Desktop companion / native messaging
+        - Build / verify / CI
+        - Docs
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      description: OS, Chrome version, Node/Rust if relevant
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / verify output
+      description: Paste relevant errors (redact tokens)
+      render: shell
+    validations:
+      required: false

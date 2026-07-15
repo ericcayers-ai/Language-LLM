@@ -1,0 +1,12 @@
+[package]
+name = "media-pipeline"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Decode, resample, VAD, and ephemeral audio chunking"
+
+[dependencies]
+language-llm-protocol = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }

@@ -1,0 +1,32 @@
+{
+  "name": "@language-llm/extension",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "zip": "wxt zip",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@language-llm/language-kits": "workspace:*",
+    "@language-llm/learning": "workspace:*",
+    "@language-llm/lyrics": "workspace:*",
+    "@language-llm/mt-core": "workspace:*",
+    "@language-llm/page-translate": "workspace:*",
+    "@language-llm/protocol": "workspace:*",
+    "@language-llm/ui": "workspace:*",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.287",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8",
+    "wxt": "^0.19.22"
+  }
+}

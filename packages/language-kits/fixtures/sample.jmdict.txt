@@ -1,0 +1,4 @@
+# Sample JMdict / EDICT2-style lines (fixture — not a full dump)
+日本 [にほん] /(n)/Japan/Japanese/
+食べる [たべる] /(v1)/to eat/to live on (food)/
+猫 [ねこ] /(n)/cat/

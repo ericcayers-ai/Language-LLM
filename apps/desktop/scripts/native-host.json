@@ -1,0 +1,9 @@
+{
+  "name": "com.languagellm.companion",
+  "description": "Language-LLM local companion bootstrap",
+  "path": "REPLACE_WITH_ABSOLUTE_PATH_TO_WRAPPER_OR_BINARY",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://REPLACE_EXTENSION_ID/"
+  ]
+}

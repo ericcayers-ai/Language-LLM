@@ -1,0 +1,4 @@
+# CC-CEDICT sample fixture
+中國 中国 [Zhong1 guo2] /China/Middle Kingdom/
+貓 猫 [mao1] /cat/
+學習 学习 [xue2 xi2] /to learn/to study/

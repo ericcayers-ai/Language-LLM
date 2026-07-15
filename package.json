@@ -1,0 +1,19 @@
+{
+  "name": "language-llm",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Local-first YouTube language suite (extension + companion)",
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "verify": "node scripts/verify.mjs",
+    "test:js": "pnpm -r --filter \"!@language-llm/extension\" test",
+    "test:all": "pnpm -r test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@9.15.0"
+}

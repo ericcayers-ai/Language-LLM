@@ -1,0 +1,44 @@
+/**
+ * Design tokens — Language-LLM
+ *
+ * Fonts (load in host app):
+ * - Atkinson Hyperlegible (UI + captions; high legibility)
+ * - Noto Sans (broad script coverage)
+ * - IBM Plex Mono (timestamps, ids, evidence codes)
+ */
+
+:root {
+  --llm-ink: #111318;
+  --llm-paper: #f7f8fa;
+  --llm-signal-blue: #2f6fed;
+  --llm-amber-evidence: #c47b17;
+  --llm-error-red: #b42318;
+  --llm-muted-slate: #667085;
+
+  --llm-font-ui: "Atkinson Hyperlegible", "Noto Sans", sans-serif;
+  --llm-font-script: "Noto Sans", "Atkinson Hyperlegible", sans-serif;
+  --llm-font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  --llm-focus-ring: 0 0 0 3px color-mix(in srgb, var(--llm-signal-blue) 55%, transparent);
+  --llm-focus-offset: 2px;
+
+  --llm-space-1: 0.25rem;
+  --llm-space-2: 0.5rem;
+  --llm-space-3: 0.75rem;
+  --llm-space-4: 1rem;
+  --llm-radius: 2px;
+  --llm-overlay-max-width: min(42rem, 92vw);
+}
+
+.llm-focus-ring:focus-visible {
+  outline: none;
+  box-shadow: var(--llm-focus-ring);
+  outline-offset: var(--llm-focus-offset);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .llm-motion-safe {
+    transition: none !important;
+    animation: none !important;
+  }
+}
