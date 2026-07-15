@@ -9,6 +9,7 @@ use local_store::{PrivacyWipeScope, RetentionPreset, SqliteStore};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
+#[cfg(any(target_os = "windows", target_os = "macos"))]
 use std::process::Command;
 use std::sync::{Arc, Mutex};
 
@@ -518,7 +519,7 @@ fn write_native_host_registration(
             serde_json::to_string_pretty(&body).map_err(|e| e.to_string())?,
         )
         .map_err(|e| e.to_string())?;
-        return Ok((manifest, wrapper));
+        Ok((manifest, wrapper))
     }
 
     #[cfg(target_os = "linux")]
@@ -555,7 +556,7 @@ fn write_native_host_registration(
             serde_json::to_string_pretty(&body).map_err(|e| e.to_string())?,
         )
         .map_err(|e| e.to_string())?;
-        return Ok((manifest, wrapper));
+        Ok((manifest, wrapper))
     }
 
     #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
