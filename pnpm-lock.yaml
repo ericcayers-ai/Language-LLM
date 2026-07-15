@@ -132,9 +132,6 @@ importers:
       '@language-llm/protocol':
         specifier: workspace:*
         version: link:../packages/protocol
-      '@language-llm/ui':
-        specifier: workspace:*
-        version: link:../packages/ui
     devDependencies:
       typescript:
         specifier: ^5.7.2

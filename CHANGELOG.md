@@ -8,11 +8,21 @@ Until then, entries track monorepo overhaul milestones. **Do not** read pre-1.0 
 
 ## [Unreleased]
 
+### Fixed
+
+-
+
+## [0.1.0] — 2026-07-16
+
+First tagged milestone after the product overhaul. Software paths ship with honest OfflineMock / weights-required labeling; not a Chrome Web Store or signed-desktop GA.
+
 ### Added
 
 - Documentation taxonomy: implemented / development fallback / weights-required / manually verified / deferred ([STATUS.md](./STATUS.md), [README.md](./README.md))
 - Community & ops docs: [SECURITY.md](./SECURITY.md), privacy, enterprise Chrome, troubleshooting, attributions, Dependabot, CODEOWNERS, release notes template
 - Source timeline `developmentFallback` flag for labeled OfflineMock ASR
+- Cross-platform CI quality matrix (ubuntu / windows / macos) plus unsigned headless companion artifacts and optional Tauri GUI check
+- Protected `release.yml` workflow stub (unsigned dry-run by default; signing/CWS secrets external)
 
 ### Changed
 
@@ -23,6 +33,10 @@ Until then, entries track monorepo overhaul milestones. **Do not** read pre-1.0 
 - OfflineMock ASR uses valid `asr` provenance + honest overlay status (no fake “live ASR” claim)
 - Unsupported `job.submit` kinds fail closed instead of returning mock success
 - Provisional MT / page-translate / stub VLM status copy distinguishes OfflineMock vs [dev] companion-down
+
+### Fixed
+
+- CI `pnpm install --frozen-lockfile` failure: lockfile still listed `@language-llm/ui` under `benchmarks` after that dependency was removed from `benchmarks/package.json`
 
 ### Notes (product, from overhaul — software-side)
 
