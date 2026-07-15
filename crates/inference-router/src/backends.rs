@@ -350,11 +350,8 @@ mod tests {
         #[cfg(not(windows))]
         {
             let path = dir.join(stem);
-            let mut f = fs::File::create(&path).unwrap();
-            writeln!(f, "#!/bin/sh").unwrap();
-            writeln!(f, "echo '{echo}'").unwrap();
-            writeln!(f, "exit 0").unwrap();
-            drop(f);
+            let body = format!("#!/bin/sh\necho '{echo}'\nexit 0\n");
+            fs::write(&path, body).unwrap();
             use std::os::unix::fs::PermissionsExt;
             let mut perms = fs::metadata(&path).unwrap().permissions();
             perms.set_mode(0o755);

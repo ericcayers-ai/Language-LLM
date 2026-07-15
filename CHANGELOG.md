@@ -37,6 +37,7 @@ First tagged milestone after the product overhaul. Software paths ship with hone
 ### Fixed
 
 - CI `pnpm install --frozen-lockfile` failure: lockfile still listed `@language-llm/ui` under `benchmarks` after that dependency was removed from `benchmarks/package.json`
+- Unix CI compile of `inference-router` fake-CLI tests: missing `std::io::Write` for shell stub writer (Windows path was fine; switched unix stub to `fs::write`)
 
 ### Notes (product, from overhaul — software-side)
 
