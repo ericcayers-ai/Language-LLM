@@ -90,7 +90,7 @@ jobs:
 
       - name: Upload extension artifact
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: extension-zip-${{ matrix.os }}
           path: |
@@ -111,7 +111,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Release binary (headless, unsigned)
         run: cargo build -p language-llm-desktop --release
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: companion-headless-${{ matrix.os }}
           path: |
