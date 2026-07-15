@@ -139,7 +139,7 @@ mod tests {
         let c = cue(0, 1000, "hello");
         assert!(validate_cue(&c).is_ok());
         assert!(characters_per_second(&c) > 0.0);
-        let srt = to_srt(&[c.clone()]);
+        let srt = to_srt(std::slice::from_ref(&c));
         assert!(srt.contains("-->"));
         let lrc = to_lrc(&[c]);
         assert!(lrc.starts_with('['));

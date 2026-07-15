@@ -77,6 +77,8 @@ Dictionary data lives in the **companion database**, not Chrome sync storage. Sh
 
 ## Related documents
 
+- [ATTRIBUTIONS.md](./ATTRIBUTIONS.md) — user-facing notice text
 - [ADR-002: Model Routing](../architecture/ADR-002-model-routing.md)
 - [Threat model](../architecture/threat-model.md)
 - [Architecture index](../architecture/README.md)
+- [STATUS.md](../../STATUS.md) — which packs are weights-required vs mocked

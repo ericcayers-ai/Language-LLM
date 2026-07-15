@@ -17,6 +17,12 @@ chrome.runtime.onMessage.addListener((message) => {
   if (message?.type === "offscreen.stop") {
     stopCapture();
   }
+  if (message?.type === "offscreen.pause") {
+    if (audioCtx?.state === "running") void audioCtx.suspend();
+  }
+  if (message?.type === "offscreen.resume") {
+    if (audioCtx?.state === "suspended") void audioCtx.resume();
+  }
 });
 
 async function startCapture(message: {
@@ -101,12 +107,18 @@ async function startCapture(message: {
 function stopCapture(): void {
   processor?.disconnect();
   source?.disconnect();
-  stream?.getTracks().forEach((t) => t.stop());
-  void audioCtx?.close();
   processor = null;
   source = null;
-  stream = null;
-  audioCtx = null;
+  if (stream) {
+    for (const track of stream.getTracks()) track.stop();
+    stream = null;
+  }
+  if (audioCtx) {
+    void audioCtx.close().catch(() => undefined);
+    audioCtx = null;
+  }
+  jobId = null;
+  seq = 0;
   const indicator = document.getElementById("capture-indicator");
   if (indicator) indicator.textContent = "Capture idle";
 }

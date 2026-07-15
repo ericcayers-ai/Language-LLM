@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>LLM caption fixture — present</title>
+  </head>
+  <body>
+    <h1>Local caption fixture</h1>
+    <p id="status">Captions available on this page (simulated).</p>
+    <video id="player" controls width="480">
+      <track
+        id="captions"
+        kind="captions"
+        srclang="en"
+        label="English"
+        default
+        src="data:text/vtt,WEBVTT%0A%0A00:00:00.000%20--%3E%2000:00:02.000%0AHello%20from%20fixture"
+      />
+    </video>
+    <div id="caption-target" data-llm-fixture="captions-present" aria-live="polite">
+      Hello from fixture
+    </div>
+  </body>
+</html>

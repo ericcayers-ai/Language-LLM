@@ -7,6 +7,8 @@ body:
     attributes:
       value: |
         Thanks for filing a bug. Search existing issues first. Attach `pnpm verify` output when relevant.
+        Security vulnerabilities: use SECURITY.md (private reporting), not this form.
+        Redact bootstrap/session tokens from logs.
   - type: textarea
     id: summary
     attributes:
@@ -33,18 +35,34 @@ body:
       options:
         - Extension (YouTube / overlay)
         - Extension (page translate)
-        - Extension (lyrics / learning / dictionaries)
-        - Desktop companion / native messaging
+        - Extension (side panel / learning / dictionaries / privacy)
+        - Extension (lyrics)
+        - Desktop Tauri manager
+        - Companion headless / native messaging / WS
+        - Models / digests / OfflineMock
         - Build / verify / CI
         - Docs
         - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: expected_maturity
+    attributes:
+      label: Expected maturity (per STATUS.md)
+      description: Helps us tell “bug in implemented path” from “weights/manual gate missing”
+      options:
+        - Implemented path should work offline without weights
+        - Development fallback expected until companion/weights ready
+        - Weights-required (CLI + verified digest)
+        - Needs manual YouTube / tabCapture verification
+        - Unsure
     validations:
       required: true
   - type: input
     id: env
     attributes:
       label: Environment
-      description: OS, Chrome version, Node/Rust if relevant
+      description: OS, Chrome version, companion mode (serve / Tauri), Node/Rust if relevant
     validations:
       required: false
   - type: textarea

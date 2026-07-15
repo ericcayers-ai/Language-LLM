@@ -1,30 +1,93 @@
-import type { CSSProperties, HTMLAttributes } from "react";
+import type { CSSProperties, HTMLAttributes, ReactNode } from "react";
 import { colors, fonts } from "./tokens.js";
 
+export type CaptionProvenanceLabel =
+  | "human"
+  | "auto"
+  | "asr"
+  | "mt"
+  | "lyrics"
+  | "user"
+  | "vlm";
+
 export interface CaptionOverlayProps extends HTMLAttributes<HTMLDivElement> {
-  lines: string[];
+  /** Source-language caption line (optional). */
+  sourceText?: string;
+  /** Translated caption line (optional). */
+  translationText?: string;
+  /** Legacy: free-form lines; prefer sourceText/translationText. */
+  lines?: string[];
   showSource?: boolean;
+  showTranslation?: boolean;
+  blurTranslation?: boolean;
   uncertain?: boolean;
+  karaokeActive?: boolean;
+  provenance?: CaptionProvenanceLabel | string;
+  confidence?: number;
   fontScale?: number;
   opacity?: number;
+  /** Evidence / VLM summary shown beside captions in Balanced/Expert. */
+  evidenceSlot?: ReactNode;
+  /**
+   * When true, attach aria-live to the visual root.
+   * Prefer false — host should announce via a separate status region.
+   */
+  liveRegion?: boolean;
+}
+
+function provenanceLabel(p: string): string {
+  switch (p) {
+    case "human":
+    case "human-caption":
+      return "human";
+    case "auto":
+    case "auto-caption":
+      return "auto";
+    case "asr":
+    case "asr-live":
+    case "asr-import":
+      return "asr";
+    case "mt":
+      return "mt";
+    case "lyrics":
+    case "lyrics-open-api":
+    case "lyrics-import":
+      return "lyrics";
+    case "user":
+    case "user-edit":
+      return "edited";
+    case "vlm":
+    case "vlm-corrected":
+      return "vlm";
+    default:
+      return p;
+  }
 }
 
 export function CaptionOverlay({
+  sourceText,
+  translationText,
   lines,
-  showSource = false,
+  showSource = true,
+  showTranslation = true,
+  blurTranslation = false,
   uncertain = false,
+  karaokeActive = false,
+  provenance,
+  confidence,
   fontScale = 1,
   opacity = 0.92,
+  evidenceSlot,
+  liveRegion = false,
   style,
   className,
   ...rest
 }: CaptionOverlayProps) {
   const rootStyle: CSSProperties = {
-    position: "absolute",
-    left: "50%",
-    bottom: "8%",
-    transform: "translateX(-50%)",
+    position: "relative",
     width: "var(--llm-overlay-max-width, min(42rem, 92vw))",
+    maxWidth: "calc(var(--llm-caption-max-ch, 48) * 1ch)",
+    margin: "0 auto",
     textAlign: "center",
     pointerEvents: "auto",
     fontFamily: fonts.script,
@@ -34,45 +97,100 @@ export function CaptionOverlay({
     ...style,
   };
 
+  const cueStyle = (extra?: CSSProperties): CSSProperties => ({
+    margin: "0.15rem 0",
+    padding: "0.45rem 0.85rem",
+    background: `color-mix(in srgb, ${colors.ink} 78%, transparent)`,
+    fontSize: `calc(${1.15 * fontScale}rem * var(--llm-type-scale, 1))`,
+    lineHeight: 1.35,
+    borderRadius: 2,
+    userSelect: "text",
+    ...extra,
+  });
+
+  const legacyLines = lines?.slice(0, 2) ?? [];
+  const hasStructured = sourceText != null || translationText != null;
+
   return (
     <div
       role="region"
-      aria-label={showSource ? "Source captions" : "Translated captions"}
-      aria-live="polite"
-      className={["llm-focus-ring", className].filter(Boolean).join(" ")}
+      aria-label="Language-LLM captions"
+      {...(liveRegion ? { "aria-live": "polite" as const } : {})}
+      className={["llm-focus-ring", "llm-motion-safe", className]
+        .filter(Boolean)
+        .join(" ")}
       tabIndex={0}
       style={rootStyle}
       {...rest}
     >
-      {uncertain ? (
-        <span
+      {uncertain || provenance || confidence != null ? (
+        <div
+          data-llm-chrome="diagnostics"
           style={{
-            display: "inline-block",
+            display: "flex",
+            justifyContent: "center",
+            gap: "0.5rem",
             marginBottom: "0.25rem",
             fontFamily: fonts.mono,
             fontSize: "0.75rem",
-            color: colors.amberEvidence,
+            color: uncertain ? colors.amberEvidence : colors.mutedSlate,
           }}
-          aria-label="Uncertain translation"
         >
-          uncertain
-        </span>
+          {uncertain ? (
+            <span aria-label="Uncertain translation">uncertain</span>
+          ) : null}
+          {provenance ? (
+            <span aria-label={`Provenance ${provenanceLabel(provenance)}`}>
+              {provenanceLabel(provenance)}
+            </span>
+          ) : null}
+          {confidence != null ? (
+            <span
+              aria-label={`Confidence ${Math.round(confidence * 100)} percent`}
+            >
+              {Math.round(confidence * 100)}%
+            </span>
+          ) : null}
+        </div>
       ) : null}
-      {lines.slice(0, 2).map((line, i) => (
-        <p
-          key={`${i}-${line.slice(0, 12)}`}
-          style={{
-            margin: "0.1rem 0",
-            padding: "0.15rem 0.5rem",
-            background: `color-mix(in srgb, ${colors.ink} 72%, transparent)`,
-            fontSize: `${1.15 * fontScale}rem`,
-            lineHeight: 1.35,
-            userSelect: "text",
-          }}
-        >
-          {line}
-        </p>
-      ))}
+
+      {hasStructured ? (
+        <>
+          {showSource && sourceText ? (
+            <p data-llm-source="1" style={cueStyle()}>
+              {sourceText}
+            </p>
+          ) : null}
+          {showTranslation && translationText ? (
+            <p
+              data-llm-translation="1"
+              style={cueStyle({
+                filter: blurTranslation ? "blur(6px)" : undefined,
+                userSelect: blurTranslation ? "none" : "text",
+                outline: karaokeActive
+                  ? `2px solid ${colors.signalBlue}`
+                  : undefined,
+                color: uncertain ? colors.amberEvidence : colors.paper,
+                boxShadow: `0 1px 0 color-mix(in srgb, ${colors.signalBlue} 35%, transparent)`,
+              })}
+            >
+              {translationText}
+            </p>
+          ) : null}
+        </>
+      ) : (
+        legacyLines.map((line, i) => (
+          <p key={`${i}-${line.slice(0, 12)}`} style={cueStyle()}>
+            {line}
+          </p>
+        ))
+      )}
+
+      {evidenceSlot ? (
+        <div data-llm-chrome="evidence" style={{ marginTop: "0.35rem" }}>
+          {evidenceSlot}
+        </div>
+      ) : null}
     </div>
   );
 }

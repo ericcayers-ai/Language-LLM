@@ -56,8 +56,24 @@ describe("router", () => {
         targetLang: "xx",
         profile: "lite",
         preferBroadCoverage: true,
-      }).adapter,
-    ).toBe("madlad-400");
+      }),
+    ).toMatchObject({ adapter: "madlad-400", modelId: "madlad-400-3b" });
+    expect(
+      routeMt({
+        sourceLang: "en",
+        targetLang: "xx",
+        profile: "balanced",
+        preferBroadCoverage: true,
+      }).modelId,
+    ).toBe("madlad-400-7b");
+    expect(
+      routeMt({
+        sourceLang: "en",
+        targetLang: "xx",
+        profile: "workstation",
+        preferBroadCoverage: true,
+      }).modelId,
+    ).toBe("madlad-400-10b");
   });
 });
 

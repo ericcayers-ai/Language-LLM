@@ -1,0 +1,116 @@
+name: release
+
+# Protected release workflow stub.
+# Does NOT embed signing secrets. Wire repository secrets / environments before enabling publish steps.
+#
+# Required secrets (configure in GitHub → Settings → Secrets and environments/release):
+#   TAURI_SIGNING_PRIVATE_KEY
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+#   APPLE_CERTIFICATE / APPLE_CERTIFICATE_PASSWORD / APPLE_SIGNING_IDENTITY / APPLE_API_KEY… (macOS notarization)
+#   WINDOWS_CERTIFICATE / WINDOWS_CERTIFICATE_PASSWORD (optional Authenticode)
+#   CWS_CLIENT_ID / CWS_CLIENT_SECRET / CWS_REFRESH_TOKEN / CWS_EXTENSION_ID (Chrome Web Store)
+#
+# Trigger manually until the first real cut.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build unsigned artifacts only (skip sign/publish)"
+        type: boolean
+        default: true
+      include_gui:
+        description: "Also attempt Tauri gui bundle (needs platform WebView + icons)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    name: release gate
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Full verify (no gui unless requested)
+        run: node scripts/verify.mjs --skip-install --skip-playwright
+      - name: Confirm no embedded private keys in tree
+        run: |
+          if rg -n "BEGIN (RSA |OPENSSH |PRIVATE )?PRIVATE KEY" --glob '!**/node_modules/**' --glob '!**/target/**' . ; then
+            echo "Private key material found in repository — aborting release"
+            exit 1
+          fi
+          echo "No private key blocks detected"
+
+  package-unsigned:
+    name: unsigned packages (${{ matrix.os }})
+    needs: gate
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    environment: release
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @language-llm/extension build && pnpm --filter @language-llm/extension zip
+      - run: cargo build -p language-llm-desktop --release
+      - name: Optional gui bundle (unsigned)
+        if: ${{ inputs.include_gui }}
+        continue-on-error: true
+        run: |
+          pnpm --filter @language-llm/desktop build
+          pnpm --filter @language-llm/desktop tauri build
+        env:
+          # Public key only — private key from secrets when dry_run is false
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-${{ matrix.os }}
+          path: |
+            apps/extension/.output/*.zip
+            target/release/language-llm-desktop
+            target/release/language-llm-desktop.exe
+            apps/desktop/src-tauri/target/release/bundle/**
+          if-no-files-found: warn
+
+  sign-and-publish:
+    name: sign / notarize / CWS prep
+    needs: package-unsigned
+    if: ${{ inputs.dry_run == false }}
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - name: Placeholder — wire real signing
+        run: |
+          echo "dry_run=false: configure platform signing + CWS upload here."
+          echo "Expected secrets: TAURI_SIGNING_PRIVATE_KEY, Apple notarization, Windows cert, CWS_*"
+          echo "This stub intentionally fails closed until those pipelines are implemented."
+          exit 1

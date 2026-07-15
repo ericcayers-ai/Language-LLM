@@ -1,0 +1,14 @@
+# Default owners for Language-LLM. Adjust as the maintainer set grows.
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+*       @ericcayers-ai
+
+/.github/                 @ericcayers-ai
+/docs/                    @ericcayers-ai
+/SECURITY.md              @ericcayers-ai
+/STATUS.md                @ericcayers-ai
+/models/catalog.json      @ericcayers-ai
+/apps/desktop/src-tauri/  @ericcayers-ai
+/apps/extension/          @ericcayers-ai
+/packages/protocol/       @ericcayers-ai
+/crates/                  @ericcayers-ai

@@ -1,0 +1,57 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Language-LLM",
+  "version": "0.1.0",
+  "identifier": "com.languagellm.desktop",
+  "build": {
+    "features": ["gui"],
+    "beforeDevCommand": "pnpm --filter @language-llm/desktop dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "pnpm --filter @language-llm/desktop build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Language-LLM Manager",
+        "width": 1100,
+        "height": 760,
+        "minWidth": 840,
+        "minHeight": 560,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:*"
+    },
+    "trayIcon": {
+      "iconPath": "icons/icon.png",
+      "iconAsTemplate": true
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/henry.w@example.net",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "Productivity",
+    "shortDescription": "Local-first Language-LLM companion and model manager",
+    "longDescription": "Desktop manager for the Language-LLM companion: models, privacy, jobs, diagnostics, and signed updates. Inference stays local."
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "UNCONFIGURED_UPDATER_PUBLIC_KEY",
+      "endpoints": [
+        "https://github.com/language-llm/language-llm/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}

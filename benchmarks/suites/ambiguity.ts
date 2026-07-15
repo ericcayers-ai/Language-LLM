@@ -67,7 +67,11 @@ export function evaluateAmbiguityCases(
   };
 }
 
-export function runAmbiguityHarnessFixture(): AmbiguityEvalReport {
+/**
+ * Synthetic VLM-gate ambiguity metric smoke — not release-quality VLM evidence.
+ * Classification: fixture-metric-smoke.
+ */
+export function runAmbiguitySyntheticMetricSmoke(): AmbiguityEvalReport {
   return evaluateAmbiguityCases([
     {
       id: "deixis-1",
@@ -93,4 +97,9 @@ export function runAmbiguityHarnessFixture(): AmbiguityEvalReport {
       confidence: 0.55,
     },
   ]);
+}
+
+/** @deprecated Alias — prefer runAmbiguitySyntheticMetricSmoke. */
+export function runAmbiguityHarnessFixture(): AmbiguityEvalReport {
+  return runAmbiguitySyntheticMetricSmoke();
 }

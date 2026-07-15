@@ -77,6 +77,8 @@ export interface SourceTimeline {
   immutable: true;
   captionSource?: CaptionSourceKind;
   language?: string;
+  /** True when cues came from OfflineMock / stub ASR — not a real transcript. */
+  developmentFallback?: boolean;
 }
 
 export interface TranslationCue {
@@ -417,6 +419,131 @@ export type WsMessage =
       type: "lyrics.clear-cache";
       sessionToken: SessionToken;
       videoId?: VideoId;
+    }
+  | {
+      type: "lyrics.cache.cleared";
+      sessionToken: SessionToken;
+      cleared: number;
+    }
+  | {
+      type: "settings.lyrics.network";
+      sessionToken: SessionToken;
+      allowed: boolean;
+    }
+  | {
+      type: "job.pause";
+      sessionToken: SessionToken;
+      jobId: JobId;
+    }
+  | {
+      type: "job.resume";
+      sessionToken: SessionToken;
+      jobId: JobId;
+    }
+  | {
+      type: "audio.chunk";
+      sessionToken: SessionToken;
+      jobId: JobId;
+      sampleRateHz: number;
+      seq: number;
+      pcmI16LeBase64: string;
+    }
+  | {
+      type: "privacy.wipe";
+      sessionToken: SessionToken;
+      scope:
+        | "all"
+        | "transcripts"
+        | "translations"
+        | "lyrics"
+        | "page-cache"
+        | "study"
+        | "dictionaries";
+    }
+  | {
+      type: "privacy.wipe.result";
+      sessionToken: SessionToken;
+      cleared: Record<string, number>;
+    }
+  | {
+      type: "retention.set";
+      sessionToken: SessionToken;
+      preset: "session" | "days7" | "days30" | "keep";
+    }
+  | {
+      type: "retention.get";
+      sessionToken: SessionToken;
+    }
+  | {
+      type: "retention.status";
+      sessionToken: SessionToken;
+      preset: "session" | "days7" | "days30" | "keep";
+    }
+  | {
+      type: "timeline.hydrate";
+      sessionToken: SessionToken;
+      videoId: VideoId;
+      sourceHash?: string;
+    }
+  | {
+      type: "timeline.hydrated";
+      sessionToken: SessionToken;
+      videoId: VideoId;
+      timeline?: SourceTimeline;
+      translation?: {
+        videoId: VideoId;
+        cues: TranslationCue[];
+        revisionId: RevisionId;
+        sourceHash?: string;
+        targetLang?: string;
+      };
+    }
+  | {
+      type: "study.sync";
+      sessionToken: SessionToken;
+      op: "put" | "get" | "list" | "delete";
+      kind?: string;
+      id?: string;
+      payload?: Record<string, unknown>;
+    }
+  | {
+      type: "study.sync.result";
+      sessionToken: SessionToken;
+      result: Record<string, unknown>;
+    }
+  | {
+      type: "dictionary.import";
+      sessionToken: SessionToken;
+      id: string;
+      name: string;
+      language: string;
+      license: string;
+      payloadPath?: string;
+      entries?: Array<{
+        id: string;
+        surface: string;
+        reading?: string;
+        glossaryJson?: string;
+      }>;
+      imported?: number;
+    }
+  | {
+      type: "dictionary.lookup";
+      sessionToken: SessionToken;
+      surface: string;
+      entries?: Array<{
+        id: string;
+        dictionaryId: string;
+        surface: string;
+        reading?: string;
+        glossaryJson?: string;
+      }>;
+    }
+  | {
+      type: "dictionary.stats";
+      sessionToken: SessionToken;
+      dictionaries: number;
+      entries: number;
     }
   | {
       type: "error";

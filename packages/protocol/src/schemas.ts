@@ -104,6 +104,7 @@ export const sourceTimelineSchema = z.object({
     .enum(["human", "auto", "asr-live", "asr-import", "user-edit"])
     .optional(),
   language: z.string().optional(),
+  developmentFallback: z.boolean().optional(),
 });
 
 export const timelineSourceMessageSchema = z.object({
@@ -123,12 +124,58 @@ export const translationCueSchema = z.object({
   endMs: z.number().nonnegative().optional(),
 });
 
+export const retentionPresetSchema = z.enum([
+  "session",
+  "days7",
+  "days30",
+  "keep",
+]);
+
+export const privacyWipeScopeSchema = z.enum([
+  "all",
+  "transcripts",
+  "translations",
+  "lyrics",
+  "page-cache",
+  "study",
+  "dictionaries",
+]);
+
 export const criticalWsMessageSchema = z.discriminatedUnion("type", [
   authHandshakeRequestSchema,
   authHandshakeResponseSchema,
   authHandshakeFailureSchema,
   jobSubmitSchema,
   timelineSourceMessageSchema,
+  z.object({
+    type: z.literal("privacy.wipe"),
+    sessionToken: z.string().min(32),
+    scope: privacyWipeScopeSchema,
+  }),
+  z.object({
+    type: z.literal("retention.set"),
+    sessionToken: z.string().min(32),
+    preset: retentionPresetSchema,
+  }),
+  z.object({
+    type: z.literal("timeline.hydrate"),
+    sessionToken: z.string().min(32),
+    videoId: z.string().min(1),
+    sourceHash: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal("study.sync"),
+    sessionToken: z.string().min(32),
+    op: z.enum(["put", "get", "list", "delete"]),
+    kind: z.string().optional(),
+    id: z.string().optional(),
+    payload: z.record(z.unknown()).optional(),
+  }),
+  z.object({
+    type: z.literal("dictionary.lookup"),
+    sessionToken: z.string().min(32),
+    surface: z.string().min(1),
+  }),
   z.object({
     type: z.literal("job.progress"),
     sessionToken: z.string().min(32),

@@ -13,7 +13,7 @@ Two hard constraints shape the runtime split:
 1. **Chrome extension limits.** Manifest V3 service workers are ephemeral, remote code execution is forbidden for store distribution, and a browser extension cannot efficiently host multi-billion-parameter models, GPU schedulers, or large model-file managers by itself.
 2. **Chrome native messaging payload caps.** Host→extension native messaging is capped at **1 MB** per message. Streaming ASR chunks, cue timelines, model progress, and cancel/resume events routinely exceed that budget.
 
-Therefore the product is two cooperating runtimes: a thin Chrome MV3 extension for page integration, and a signed local companion for inference and storage.
+Therefore the product is two cooperating runtimes: a thin Chrome MV3 extension for page integration, and a local companion (Tauri-managed, with headless `--serve` retained) for inference and storage. **Code-signed installers and signed catalogs are release goals** — see [`STATUS.md`](../../STATUS.md); do not assume notarization is live.
 
 ## Decision
 
@@ -34,12 +34,12 @@ Therefore the product is two cooperating runtimes: a thin Chrome MV3 extension f
 
 ### Companion: Tauri 2 / Rust
 
-**Stack:** Tauri 2/Rust shell for Windows, macOS, and Linux.
+**Stack:** Tauri 2/Rust shell for Windows, macOS, and Linux (plus headless binary mode without GUI).
 
 **Owns:**
 
 - Installer and native-messaging host registration.
-- Signed model manager (catalog, hashes, licenses, updates).
+- Model manager (catalog, SHA-256 hashes, licenses; **signed** catalog/updates when release ops configure keys).
 - SQLite / content-addressed local store.
 - Media pipeline (decode, resample, VAD, chunking).
 - Inference scheduler and hardware probe.
@@ -59,7 +59,7 @@ Therefore the product is two cooperating runtimes: a thin Chrome MV3 extension f
 
 - Multi-billion-parameter ASR/MT/VLM packs need tens of GB of disk, quantified RAM/VRAM headroom, and sustained compute—not a short-lived service worker or content-script sandbox.
 - Extension storage (`chrome.storage`) is for lightweight prefs and session state, not model weights, dictionaries, or long transcripts.
-- Store policy forbids shipping or evaluating remote executable model code inside the extension; native binary runtimes belong in a signed companion.
+- Store policy forbids shipping or evaluating remote executable model code inside the extension; native binary runtimes belong in the local companion (signed installers when release secrets are configured — see STATUS.md).
 - Hardware probing, thermal/memory co-residency, and sequential job scheduling are OS-level concerns; the companion owns them.
 
 ### IPC: native messaging bootstrap + loopback WebSocket

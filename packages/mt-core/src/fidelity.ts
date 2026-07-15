@@ -68,6 +68,25 @@ export function runFidelityChecks(input: {
   return { ok: checks.every((c) => c.passed), checks, score };
 }
 
+const CRITICAL_CHECK_KINDS = new Set([
+  "empty-output",
+  "missing-number",
+  "url-mismatch",
+]);
+
+export function hasCriticalFidelityFailure(result: FidelityCheckResult): boolean {
+  return result.checks.some(
+    (c) => !c.passed && CRITICAL_CHECK_KINDS.has(c.kind),
+  );
+}
+
+export function formatFidelityEvidence(result: FidelityCheckResult): string {
+  return result.checks
+    .filter((c) => !c.passed)
+    .map((c) => `${c.kind}${c.detail ? `: ${c.detail}` : ""}`)
+    .join("; ");
+}
+
 export type MtAdapterId = "hy-mt2" | "madlad-400" | "mock";
 
 export interface MtRouteDecision {
@@ -84,10 +103,15 @@ export function routeMt(input: {
   preferBroadCoverage?: boolean;
 }): MtRouteDecision {
   if (input.preferBroadCoverage) {
+    const modelId =
+      input.profile === "lite"
+        ? "madlad-400-3b"
+        : input.profile === "workstation" || input.profile === "quality"
+          ? "madlad-400-10b"
+          : "madlad-400-7b";
     return {
       adapter: "madlad-400",
-      modelId:
-        input.profile === "lite" ? "madlad400-3b-mt" : "madlad400-7b-mt",
+      modelId,
       reason: "broad-coverage-fallback",
       licenseClass: "commercial-default",
     };

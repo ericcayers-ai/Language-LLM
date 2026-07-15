@@ -71,7 +71,11 @@ export function evaluateSubtitleSamples(
   };
 }
 
-export function runSubtitleHarnessFixture(): SubtitleEvalReport {
+/**
+ * Synthetic sync-drift metric smoke only — not release-quality timing evidence.
+ * Classification: fixture-metric-smoke.
+ */
+export function runSubtitleSyntheticMetricSmoke(): SubtitleEvalReport {
   return evaluateSubtitleSamples([
     {
       id: "sync-1",
@@ -86,4 +90,9 @@ export function runSubtitleHarnessFixture(): SubtitleEvalReport {
       texts: ["Hello there", "Second line of dialogue"],
     },
   ]);
+}
+
+/** @deprecated Alias — prefer runSubtitleSyntheticMetricSmoke. */
+export function runSubtitleHarnessFixture(): SubtitleEvalReport {
+  return runSubtitleSyntheticMetricSmoke();
 }

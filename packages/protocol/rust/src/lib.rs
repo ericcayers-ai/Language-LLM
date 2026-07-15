@@ -118,6 +118,9 @@ pub struct SourceTimeline {
     pub caption_source: Option<CaptionSourceKind>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub language: Option<String>,
+    /// True when cues came from OfflineMock / stub ASR — not a real transcript.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub development_fallback: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -248,7 +251,11 @@ pub enum WsMessage {
         session_token: SessionToken,
         #[serde(rename = "expiresAtMs")]
         expires_at_ms: u64,
-        #[serde(rename = "companionBuild", default, skip_serializing_if = "Option::is_none")]
+        #[serde(
+            rename = "companionBuild",
+            default,
+            skip_serializing_if = "Option::is_none"
+        )]
         companion_build: Option<String>,
         ok: bool,
     },
@@ -309,7 +316,11 @@ pub enum WsMessage {
     },
     #[serde(rename = "error")]
     Error {
-        #[serde(rename = "sessionToken", default, skip_serializing_if = "Option::is_none")]
+        #[serde(
+            rename = "sessionToken",
+            default,
+            skip_serializing_if = "Option::is_none"
+        )]
         session_token: Option<SessionToken>,
         code: String,
         message: String,
@@ -377,7 +388,11 @@ mod tests {
 
     #[test]
     fn handshake_roundtrip() {
-        let msg = make_handshake_request("ext-id-abcdefghijklmnop", "nonce-0123456789ab", 1_700_000_000_000);
+        let msg = make_handshake_request(
+            "ext-id-abcdefghijklmnop",
+            "nonce-0123456789ab",
+            1_700_000_000_000,
+        );
         let json = serde_json::to_string(&msg).expect("serialize");
         assert!(json.contains("auth.handshake.request"));
         assert!(json.contains("protocolVersion"));
@@ -397,11 +412,14 @@ mod tests {
 
     #[test]
     fn response_roundtrip() {
-        let msg = make_handshake_response("aabbccddeeff00112233445566778899", 99, Some("0.1.0".into()));
+        let msg =
+            make_handshake_response("aabbccddeeff00112233445566778899", 99, Some("0.1.0".into()));
         let json = serde_json::to_vec(&msg).unwrap();
         let back: WsMessage = serde_json::from_slice(&json).unwrap();
         match back {
-            WsMessage::AuthHandshakeResponse { ok, session_token, .. } => {
+            WsMessage::AuthHandshakeResponse {
+                ok, session_token, ..
+            } => {
                 assert!(ok);
                 assert_eq!(session_token.len(), 32);
             }

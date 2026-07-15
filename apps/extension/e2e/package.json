@@ -1,0 +1,17 @@
+{
+  "name": "@language-llm/extension-e2e",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Playwright Chrome-extension gates against controlled local fixtures",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.51.0",
+    "typescript": "^5.7.2"
+  }
+}

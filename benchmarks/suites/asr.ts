@@ -58,8 +58,12 @@ export function evaluateAsrSamples(samples: AsrSample[]): AsrEvalReport {
   };
 }
 
-/** Harness entry used by CI microbenchmarks before real model adapters land. */
-export function runAsrHarnessFixture(): AsrEvalReport {
+/**
+ * Synthetic corpus smoke for WER metric plumbing only.
+ * Classification: fixture-metric-smoke — NEVER counts as release model quality.
+ * Real artifacts belong under benchmarks/model-evals/ with classification "on-device".
+ */
+export function runAsrSyntheticMetricSmoke(): AsrEvalReport {
   return evaluateAsrSamples([
     {
       id: "en-1",
@@ -76,4 +80,9 @@ export function runAsrHarnessFixture(): AsrEvalReport {
       hypothesis: "local inference stays on device",
     },
   ]);
+}
+
+/** @deprecated Alias — prefer runAsrSyntheticMetricSmoke. */
+export function runAsrHarnessFixture(): AsrEvalReport {
+  return runAsrSyntheticMetricSmoke();
 }

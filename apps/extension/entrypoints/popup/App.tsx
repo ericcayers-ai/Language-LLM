@@ -1,93 +1,143 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { colors, fonts } from "@language-llm/ui";
-import { importDictionaryText, lookupLemma } from "@language-llm/language-kits";
-import type { StudyCard } from "@language-llm/protocol";
 import {
-  createChromeStudyStore,
-  StudySession,
-} from "../../features/learning/session";
+  Button,
+  DensityProvider,
+  EmptyState,
+  ProfilePicker,
+  StatusRegion,
+  useDensity,
+} from "@language-llm/ui";
+import "@language-llm/ui/tokens.css";
+import {
+  pingCompanion,
+  setRetention,
+  wipePrivacy,
+  type RetentionPreset,
+} from "../../features/companion/runtime";
 
 const PAGE_ORIGINS = ["http://*/*", "https://*/*"] as const;
 
-function Popup() {
-  const [status, setStatus] = useState<"unknown" | "ok" | "down">("unknown");
-  const [job, setJob] = useState("idle");
-  const [lyricsNet, setLyricsNet] = useState(false);
-  const [pagePerm, setPagePerm] = useState(false);
-  const [due, setDue] = useState<StudyCard[]>([]);
-  const [reviewCard, setReviewCard] = useState<StudyCard | null>(null);
-  const [dictCount, setDictCount] = useState(0);
-  const [dictHint, setDictHint] = useState("");
-  const [lookupQ, setLookupQ] = useState("");
-  const [lookupHit, setLookupHit] = useState("");
-  const fileRef = useRef<HTMLInputElement>(null);
-  const dictRef = useRef<HTMLInputElement>(null);
-  const studyRef = useRef<StudySession | null>(null);
+type CompanionUi = "unknown" | "ready" | "degraded" | "down";
 
-  const refreshStudy = useCallback(async () => {
-    if (!studyRef.current) {
-      studyRef.current = new StudySession(createChromeStudyStore());
-      await studyRef.current.hydrate();
-    }
-    const cards = studyRef.current.dueCards();
-    setDue(cards);
-    setReviewCard(cards[0] ?? null);
-  }, []);
+function PopupInner() {
+  const { profile, setProfile } = useDensity();
+  const [companion, setCompanion] = useState<CompanionUi>("unknown");
+  const [pagePerm, setPagePerm] = useState(false);
+  const [status, setStatus] = useState("");
+  const [tabTitle, setTabTitle] = useState("");
+  const [retention, setRetentionState] = useState<RetentionPreset>("days7");
 
   useEffect(() => {
-    chrome.runtime.sendMessage({ type: "companion.ping" }, (res) => {
-      setStatus(res?.ok ? "ok" : "down");
-    });
-    chrome.storage.local.get(["lyricsNetworkAllowed", "language-llm.lexicon"], (v) => {
-      setLyricsNet(Boolean(v.lyricsNetworkAllowed));
-      const lex = v["language-llm.lexicon"] as { count?: number } | undefined;
-      setDictCount(typeof lex?.count === "number" ? lex.count : 0);
+    void pingCompanion().then((ping) => {
+      if (ping.ready) setCompanion("ready");
+      else if (ping.degraded) setCompanion("degraded");
+      else setCompanion("down");
     });
     chrome.permissions.contains({ origins: [...PAGE_ORIGINS] }, (granted) => {
       setPagePerm(Boolean(granted));
     });
-    void refreshStudy();
-  }, [refreshStudy]);
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      setTabTitle(tabs[0]?.title ?? "");
+    });
+  }, []);
+
+  const openSidePanel = () => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const tab = tabs[0];
+      if (!tab?.windowId) return;
+      const sidePanel = (
+        chrome as typeof chrome & {
+          sidePanel?: {
+            open: (opts: { windowId: number }) => Promise<void>;
+          };
+        }
+      ).sidePanel;
+      if (sidePanel?.open) {
+        void sidePanel.open({ windowId: tab.windowId });
+        setStatus("Side panel opened");
+      } else {
+        setStatus("Side panel API unavailable in this browser");
+      }
+    });
+  };
 
   return (
     <div
       style={{
-        width: 360,
-        padding: 16,
-        fontFamily: fonts.ui,
-        color: colors.ink,
-        background: colors.paper,
-        maxHeight: 560,
-        overflow: "auto",
+        width: 340,
+        padding: 14,
+        display: "flex",
+        flexDirection: "column",
+        gap: 12,
+        boxSizing: "border-box",
       }}
     >
-      <h1 style={{ fontSize: 18, margin: 0 }}>Language-LLM</h1>
-      <p style={{ color: colors.mutedSlate, fontSize: 13 }}>
-        Local captions, translation, website translate, lyrics — offline after
-        model download.
-      </p>
-      <p>
-        Companion:{" "}
-        <strong
-          style={{
-            color: status === "ok" ? colors.signalBlue : colors.errorRed,
-          }}
-        >
-          {status}
-        </strong>
-      </p>
-      <p style={{ fontSize: 12 }}>Job: {job}</p>
+      <header>
+        <h1 style={{ fontSize: 17, margin: 0 }}>Language-LLM</h1>
+        <p style={{ margin: "4px 0 0", fontSize: 12, opacity: 0.75 }}>
+          Launcher for the current tab
+        </p>
+        {tabTitle ? (
+          <p
+            style={{
+              margin: "6px 0 0",
+              fontSize: 11,
+              opacity: 0.65,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+            title={tabTitle}
+          >
+            {tabTitle}
+          </p>
+        ) : null}
+      </header>
+
+      {companion === "down" ? (
+        <EmptyState
+          kind="no-companion"
+          actions={[
+            {
+              id: "retry",
+              label: "Retry",
+              onClick: () => {
+                void pingCompanion().then((ping) => {
+                  if (ping.ready) setCompanion("ready");
+                  else if (ping.degraded) setCompanion("degraded");
+                  else setCompanion("down");
+                });
+              },
+            },
+          ]}
+        />
+      ) : companion === "degraded" ? (
+        <StatusRegion
+          message="Companion degraded (native only) — open side panel for recovery"
+          tone="warn"
+        />
+      ) : (
+        <StatusRegion
+          message={
+            companion === "ready" ? "Companion ready" : "Checking companion…"
+          }
+          tone={companion === "ready" ? "success" : "info"}
+        />
+      )}
+
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-        <button
-          type="button"
-          style={primaryBtn}
+        <Button
+          variant="primary"
           onClick={() => {
-            setJob("translate-page");
             chrome.permissions.request(
               { origins: [...PAGE_ORIGINS] },
               (granted) => {
                 setPagePerm(Boolean(granted));
+                if (!granted) {
+                  setStatus("Host permission denied");
+                  return;
+                }
                 chrome.tabs.query(
                   { active: true, currentWindow: true },
                   (tabs) => {
@@ -98,20 +148,18 @@ function Popup() {
                         targetLang: "en",
                       });
                     }
-                    setJob(granted ? "translate-page" : "permission-denied");
+                    setStatus("Page translate started");
                   },
                 );
               },
             );
           }}
         >
-          Translate this page
-        </button>
-        <button
-          type="button"
-          style={secondaryBtn}
+          Translate page
+        </Button>
+        <Button
+          variant="ghost"
           onClick={() => {
-            setJob("transcribe-tab");
             chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
               const tab = tabs[0];
               if (tab?.id) {
@@ -122,331 +170,124 @@ function Popup() {
                       new Event("language-llm:transcribe-tab"),
                     ),
                 });
+                setStatus("Tab transcription requested");
               }
             });
           }}
         >
-          Transcribe this tab
-        </button>
+          Transcribe tab
+        </Button>
+        <Button variant="ghost" onClick={openSidePanel}>
+          Open side panel
+        </Button>
       </div>
 
-      <section style={sectionStyle} aria-label="Page translate permissions">
-        <h2 style={h2}>Website translate</h2>
-        <p style={{ fontSize: 12, margin: "0 0 8px", color: colors.mutedSlate }}>
-          Host access:{" "}
-          <strong style={{ color: pagePerm ? colors.signalBlue : colors.amberEvidence }}>
-            {pagePerm ? "granted" : "not granted"}
-          </strong>
-          . Text stays on-device.
+      <section aria-label="Website translate permission">
+        <p style={{ fontSize: 12, margin: "0 0 6px", opacity: 0.8 }}>
+          Website hosts:{" "}
+          <strong>{pagePerm ? "granted" : "not granted"}</strong>
         </p>
         {pagePerm ? (
-          <button
-            type="button"
-            style={secondaryBtn}
+          <Button
+            variant="ghost"
             onClick={() => {
               chrome.permissions.remove(
                 { origins: [...PAGE_ORIGINS] },
                 (removed) => {
                   setPagePerm(!removed);
-                  setJob(removed ? "page-perm-revoked" : "page-perm-keep");
+                  setStatus(removed ? "Permission revoked" : "Still granted");
                 },
               );
             }}
           >
-            Revoke http(s) permission
-          </button>
+            Revoke host permission
+          </Button>
         ) : (
-          <button
-            type="button"
-            style={secondaryBtn}
+          <Button
+            variant="ghost"
             onClick={() => {
               chrome.permissions.request(
                 { origins: [...PAGE_ORIGINS] },
                 (granted) => {
                   setPagePerm(Boolean(granted));
-                  setJob(granted ? "page-perm-ok" : "page-perm-denied");
+                  setStatus(
+                    granted ? "Host permission granted" : "Permission denied",
+                  );
                 },
               );
             }}
           >
-            Grant http(s) for always-on sites
-          </button>
+            Grant host permission
+          </Button>
         )}
       </section>
 
-      <section style={sectionStyle} aria-label="Learning review">
-        <h2 style={h2}>Learn · FSRS review</h2>
-        <p style={{ fontSize: 12, color: colors.mutedSlate, margin: "0 0 8px" }}>
-          {due.length} due · mine with Alt+M on the overlay
-        </p>
-        {reviewCard ? (
-          <div>
-            <p style={{ margin: "0 0 4px", fontSize: 14 }}>{reviewCard.sourceText}</p>
-            <p style={{ margin: "0 0 8px", fontSize: 12, color: colors.mutedSlate }}>
-              {reviewCard.translationText ?? "(no translation)"}
-            </p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {([1, 2, 3, 4] as const).map((rating) => (
-                <button
-                  key={rating}
-                  type="button"
-                  style={secondaryBtn}
-                  onClick={() => {
-                    void (async () => {
-                      await studyRef.current?.review(reviewCard.id, rating);
-                      setJob(`reviewed-${rating}`);
-                      await refreshStudy();
-                    })();
-                  }}
-                >
-                  {rating === 1
-                    ? "Again"
-                    : rating === 2
-                      ? "Hard"
-                      : rating === 3
-                        ? "Good"
-                        : "Easy"}
-                </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              style={{ ...secondaryBtn, marginTop: 8 }}
-              onClick={() => {
-                const csv = studyRef.current?.exportCsv() ?? "";
-                void navigator.clipboard?.writeText(csv);
-                setJob("csv-copied");
+      {profile !== "focus" ? (
+        <section aria-label="Quick privacy">
+          <p style={{ fontSize: 12, margin: "0 0 6px", opacity: 0.8 }}>
+            Retention:{" "}
+            <select
+              value={retention}
+              aria-label="Retention preset"
+              onChange={(e) => {
+                const preset = e.target.value as RetentionPreset;
+                setRetentionState(preset);
+                void setRetention(preset).then((res) => {
+                  setStatus(
+                    res.ok
+                      ? `Retention → ${preset}`
+                      : res.error ?? "Retention failed",
+                  );
+                });
               }}
             >
-              Copy CSV export
-            </button>
-          </div>
-        ) : (
-          <p style={{ fontSize: 12, color: colors.mutedSlate }}>
-            No cards due. Mine a caption with Alt+M.
+              <option value="session">session</option>
+              <option value="days7">7 days</option>
+              <option value="days30">30 days</option>
+              <option value="keep">keep</option>
+            </select>
           </p>
-        )}
-      </section>
-
-      <section style={sectionStyle} aria-label="Dictionary import">
-        <h2 style={h2}>Dictionaries</h2>
-        <p style={{ fontSize: 12, color: colors.mutedSlate, margin: "0 0 8px" }}>
-          {dictCount > 0
-            ? `${dictCount} entries loaded (${dictHint || "local"})`
-            : "Import JMdict / CC-CEDICT / Kaikki JSONL"}
-        </p>
-        <button
-          type="button"
-          style={secondaryBtn}
-          onClick={() => dictRef.current?.click()}
-        >
-          Import dictionary file
-        </button>
-        <input
-          ref={dictRef}
-          type="file"
-          accept=".txt,.xml,.jsonl,.u8,text/plain,application/xml"
-          style={{ display: "none" }}
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = () => {
-              const content = String(reader.result ?? "");
-              const result = importDictionaryText(content, {
-                filename: file.name,
-              });
-              if (result.format === "unknown" || result.entries.length === 0) {
-                setJob("dict-unrecognized");
+          <Button
+            variant="ghost"
+            onClick={() => {
+              if (
+                !window.confirm(
+                  "Wipe all companion-stored data (transcripts, study, dictionaries)?",
+                )
+              ) {
                 return;
               }
-              chrome.storage.local.set(
-                {
-                  "language-llm.lexicon": {
-                    format: result.format,
-                    count: result.entries.length,
-                    // Keep a bounded cache for popup lookup demos.
-                    sample: result.entries.slice(0, 500),
-                  },
-                },
-                () => {
-                  setDictCount(result.entries.length);
-                  setDictHint(result.format);
-                  setJob(`dict-${result.format}:${result.entries.length}`);
-                },
-              );
-            };
-            reader.readAsText(file);
-          }}
-        />
-        <div style={{ marginTop: 8, display: "flex", gap: 6 }}>
-          <input
-            value={lookupQ}
-            onChange={(e) => setLookupQ(e.target.value)}
-            placeholder="Lookup lemma"
-            aria-label="Dictionary lookup"
-            style={{
-              flex: 1,
-              border: `1px solid ${colors.mutedSlate}`,
-              padding: "6px 8px",
-              fontFamily: fonts.ui,
-            }}
-          />
-          <button
-            type="button"
-            style={secondaryBtn}
-            onClick={() => {
-              chrome.storage.local.get("language-llm.lexicon", (v) => {
-                const lex = v["language-llm.lexicon"] as
-                  | { sample?: Parameters<typeof lookupLemma>[0] }
-                  | undefined;
-                const hit = lookupLemma(lex?.sample ?? [], lookupQ);
-                setLookupHit(
-                  hit
-                    ? `${hit.lemma}: ${hit.senses[0]?.glosses.join("; ") ?? ""}`
-                    : "no hit",
+              void wipePrivacy("all").then((res) => {
+                setStatus(
+                  res.ok ? "Privacy wipe completed" : res.error ?? "Wipe failed",
                 );
               });
             }}
           >
-            Look up
-          </button>
-        </div>
-        {lookupHit ? (
-          <p style={{ fontSize: 12, marginTop: 6 }}>{lookupHit}</p>
-        ) : null}
-      </section>
+            Privacy wipe…
+          </Button>
+        </section>
+      ) : null}
 
-      <hr
-        style={{
-          border: 0,
-          borderTop: `1px solid ${colors.mutedSlate}`,
-          margin: "14px 0",
-          opacity: 0.35,
-        }}
-      />
-      <label
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          fontSize: 13,
-          cursor: "pointer",
-        }}
-      >
-        <input
-          type="checkbox"
-          checked={lyricsNet}
-          onChange={(e) => {
-            const allowed = e.target.checked;
-            setLyricsNet(allowed);
-            chrome.runtime.sendMessage({
-              type: "lyrics.set-network",
-              allowed,
-            });
-          }}
-        />
-        Allow LRCLIB lyrics fetch (attributed, clearable)
-      </label>
-      <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button
-          type="button"
-          style={secondaryBtn}
-          onClick={() => fileRef.current?.click()}
-        >
-          Import LRC / TTML
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".lrc,.ttml,.txt,text/plain"
-          style={{ display: "none" }}
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = () => {
-              const content = String(reader.result ?? "");
-              const name = file.name.toLowerCase();
-              const format = name.endsWith(".ttml")
-                ? "ttml"
-                : name.endsWith(".lrc")
-                  ? "lrc"
-                  : "plain";
-              setJob(`import-${format}`);
-              chrome.runtime.sendMessage({
-                type: "lyrics.import-lrc",
-                format,
-                content,
-              });
-            };
-            reader.readAsText(file);
-          }}
-        />
-        <button
-          type="button"
-          style={secondaryBtn}
-          disabled={!lyricsNet}
-          onClick={() => {
-            setJob("lrclib");
-            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-              const title = tabs[0]?.title ?? "";
-              chrome.runtime.sendMessage(
-                {
-                  type: "lyrics.fetch-lrclib",
-                  trackName: title,
-                  videoId: "active",
-                },
-                (res) => {
-                  if (res?.ok && res.result?.lrc) {
-                    chrome.tabs.sendMessage(tabs[0]!.id!, {
-                      type: "lyrics.apply-lrc",
-                      lrc: res.result.lrc,
-                    });
-                    setJob("lrclib-ok");
-                  } else {
-                    setJob(res?.error ?? "lrclib-failed");
-                  }
-                },
-              );
-            });
-          }}
-        >
-          Fetch LRCLIB
-        </button>
-      </div>
+      <ProfilePicker value={profile} onChange={setProfile} compact />
+
+      {status ? <StatusRegion message={status} tone="info" /> : null}
+
+      <p style={{ fontSize: 11, margin: 0, opacity: 0.65 }}>
+        Reviews, dictionaries, and lyrics live in the side panel.
+        {profile === "focus" ? " Focus mode hides nonessential chrome." : ""}
+      </p>
     </div>
   );
 }
 
-const sectionStyle: React.CSSProperties = {
-  marginTop: 14,
-  paddingTop: 10,
-  borderTop: `1px solid color-mix(in srgb, ${colors.mutedSlate} 35%, transparent)`,
-};
-
-const h2: React.CSSProperties = {
-  fontSize: 14,
-  margin: "0 0 6px",
-  fontWeight: 600,
-};
-
-const primaryBtn: React.CSSProperties = {
-  background: colors.signalBlue,
-  color: colors.paper,
-  border: 0,
-  padding: "8px 12px",
-  minHeight: 24,
-  cursor: "pointer",
-};
-
-const secondaryBtn: React.CSSProperties = {
-  background: "transparent",
-  color: colors.ink,
-  border: `1px solid ${colors.mutedSlate}`,
-  padding: "8px 12px",
-  cursor: "pointer",
-};
+function Popup() {
+  return (
+    <DensityProvider persist>
+      <PopupInner />
+    </DensityProvider>
+  );
+}
 
 const root = document.getElementById("root");
 if (root) createRoot(root).render(<Popup />);

@@ -22,7 +22,7 @@ export interface StudySessionStore {
 
 const STORAGE_KEY = "language-llm.study";
 
-/** chrome.storage.local backed store (extension). */
+/** chrome.storage.local offline cache (prefs + conflict-safe mirror). */
 export function createChromeStudyStore(
   storage: {
     get: (keys: string | string[]) => Promise<Record<string, unknown>>;
@@ -59,6 +59,130 @@ export function createChromeStudyStore(
       await storage.set({ [STORAGE_KEY]: snapshot });
     },
   };
+}
+
+/**
+ * Companion SQLite is the study authority when connected.
+ * Falls back to the provided offline store on failure (conflict-safe merge on next hydrate).
+ */
+export function createCompanionStudyStore(
+  offline: StudySessionStore = createChromeStudyStore(),
+  send: (
+    message: Record<string, unknown>,
+  ) => Promise<{ ok: boolean; result?: unknown; error?: string }> = (message) =>
+    new Promise((resolve) => {
+      chrome.runtime.sendMessage(message, (response) => {
+        resolve(
+          (response as { ok: boolean; result?: unknown; error?: string }) ?? {
+            ok: false,
+            error: "no-response",
+          },
+        );
+      });
+    }),
+): StudySessionStore {
+  return {
+    async load() {
+      try {
+        const res = await send({
+          type: "study.sync",
+          op: "list",
+          kind: "study-session",
+        });
+        if (res.ok && res.result) {
+          const payload = extractStudyPayload(res.result);
+          if (payload) {
+            await offline.save(payload);
+            return payload;
+          }
+        }
+      } catch {
+        // fall through to offline
+      }
+      return offline.load();
+    },
+    async save(snapshot) {
+      await offline.save(snapshot);
+      try {
+        await send({
+          type: "study.sync",
+          op: "put",
+          kind: "study-session",
+          id: "session",
+          payload: snapshot as unknown as Record<string, unknown>,
+        });
+      } catch {
+        // Offline mirror already saved; companion catches up on next connect.
+      }
+    },
+  };
+}
+
+function extractStudyPayload(result: unknown): StudySessionSnapshot | null {
+  if (typeof result !== "object" || result === null) return null;
+  const root = result as Record<string, unknown>;
+  // Unwrap study.sync.result WS envelope when present.
+  const inner =
+    root.type === "study.sync.result" && typeof root.result === "object"
+      ? (root.result as Record<string, unknown>)
+      : root;
+
+  if (inner.payload && typeof inner.payload === "object") {
+    const payload = inner.payload as StudySessionSnapshot;
+    if (Array.isArray(payload.cards)) {
+      return {
+        cards: payload.cards,
+        knownWords: Array.isArray(payload.knownWords)
+          ? payload.knownWords
+          : [],
+      };
+    }
+  }
+
+  const items = inner.items;
+  if (Array.isArray(items)) {
+    for (const item of items) {
+      if (typeof item !== "object" || item === null) continue;
+      const row = item as {
+        id?: string;
+        payload?: StudySessionSnapshot | string;
+        payload_json?: string;
+        payloadJson?: string;
+      };
+      if (row.id && row.id !== "session") continue;
+      if (row.payload && typeof row.payload === "object") {
+        const payload = row.payload as StudySessionSnapshot;
+        if (Array.isArray(payload.cards)) {
+          return {
+            cards: payload.cards,
+            knownWords: Array.isArray(payload.knownWords)
+              ? payload.knownWords
+              : [],
+          };
+        }
+      }
+      const raw =
+        typeof row.payload === "string"
+          ? row.payload
+          : (row.payload_json ?? row.payloadJson);
+      if (typeof raw === "string") {
+        try {
+          const parsed = JSON.parse(raw) as StudySessionSnapshot;
+          if (Array.isArray(parsed.cards)) {
+            return {
+              cards: parsed.cards,
+              knownWords: Array.isArray(parsed.knownWords)
+                ? parsed.knownWords
+                : [],
+            };
+          }
+        } catch {
+          /* continue */
+        }
+      }
+    }
+  }
+  return null;
 }
 
 /** In-memory store for unit tests. */

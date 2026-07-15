@@ -1,12 +1,14 @@
 # Threat Model
 
-**Status:** Phase 0 freeze  
+**Status:** Phase 0 freeze (contracts); see [`STATUS.md`](../../STATUS.md) for implementation labels  
 **Date:** 2026-07-16  
-**Scope:** Extension (Chrome MV3 / WXT) + signed local companion (Tauri 2 / Rust) for Local YouTube Language Suite
+**Scope:** Extension (Chrome MV3 / WXT) + local companion (Tauri 2 / Rust) for Local YouTube Language Suite
 
 ## Purpose
 
-Document assets, trust boundaries, threats, and mitigations before scaffolding code. Local-first does not mean zero attack surface: untrusted YouTube page content, caption text used as model input, model/dictionary supply chain, and a privileged companion process are in scope.
+Document assets, trust boundaries, threats, and mitigations. Local-first does not mean zero attack surface: untrusted YouTube page content, caption text used as model input, model/dictionary supply chain, and a privileged companion process are in scope.
+
+**Honesty note:** Mitigations such as “signed companion binaries” and “signed model catalogs” are **design targets**. As of the Phase 3B docs refresh, updater signing secrets and live Ed25519 catalog verification remain **Deferred** / unconfigured — loopback WS auth, Origin/extension pin, digest gates, and SQLite wipe/retention are the **Implemented** controls.
 
 ## Assets
 

@@ -210,6 +210,69 @@ export function createLyricsTimeline(input: {
   };
 }
 
+export function createPrivacyWipe(input: {
+  sessionToken: SessionToken;
+  scope: Extract<WsMessage, { type: "privacy.wipe" }>["scope"];
+}): Extract<WsMessage, { type: "privacy.wipe" }> {
+  return {
+    type: "privacy.wipe",
+    sessionToken: input.sessionToken,
+    scope: input.scope,
+  };
+}
+
+export function createRetentionSet(input: {
+  sessionToken: SessionToken;
+  preset: Extract<WsMessage, { type: "retention.set" }>["preset"];
+}): Extract<WsMessage, { type: "retention.set" }> {
+  return {
+    type: "retention.set",
+    sessionToken: input.sessionToken,
+    preset: input.preset,
+  };
+}
+
+export function createTimelineHydrate(input: {
+  sessionToken: SessionToken;
+  videoId: VideoId;
+  sourceHash?: string;
+}): Extract<WsMessage, { type: "timeline.hydrate" }> {
+  return {
+    type: "timeline.hydrate",
+    sessionToken: input.sessionToken,
+    videoId: input.videoId,
+    ...(input.sourceHash !== undefined ? { sourceHash: input.sourceHash } : {}),
+  };
+}
+
+export function createStudySync(input: {
+  sessionToken: SessionToken;
+  op: Extract<WsMessage, { type: "study.sync" }>["op"];
+  kind?: string;
+  id?: string;
+  payload?: Record<string, unknown>;
+}): Extract<WsMessage, { type: "study.sync" }> {
+  return {
+    type: "study.sync",
+    sessionToken: input.sessionToken,
+    op: input.op,
+    ...(input.kind !== undefined ? { kind: input.kind } : {}),
+    ...(input.id !== undefined ? { id: input.id } : {}),
+    ...(input.payload !== undefined ? { payload: input.payload } : {}),
+  };
+}
+
+export function createDictionaryLookup(input: {
+  sessionToken: SessionToken;
+  surface: string;
+}): Extract<WsMessage, { type: "dictionary.lookup" }> {
+  return {
+    type: "dictionary.lookup",
+    sessionToken: input.sessionToken,
+    surface: input.surface,
+  };
+}
+
 export function isWsMessage(value: unknown): value is WsMessage {
   return (
     typeof value === "object" &&

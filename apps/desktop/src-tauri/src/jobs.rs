@@ -1,10 +1,16 @@
 //! Job registry: translate / ASR / page-translate / cancel / resume (mock-capable).
 
-use inference_router::{mock_translate_line, InferenceMode};
+use inference_router::{mock_translate_line, InferenceMode, LlamaCppBackend, RouterError};
 use language_llm_protocol::{JobKind, JobProgress, JobStatus};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
+
+fn build_mt_prompt(source: &str, target_lang: &str) -> String {
+    format!(
+        "Translate the following text to {target_lang}. Output only the translation, no explanation.\n\n{source}"
+    )
+}
 
 #[derive(Debug, Clone)]
 pub struct TrackedJob {
@@ -91,14 +97,41 @@ impl JobRegistry {
         self.jobs.get_mut(job_id)
     }
 
-    /// Run a mock translate job from source cue texts in payload.
-    pub fn run_mock_translate(&mut self, job_id: &str, mode: InferenceMode) -> Option<JobProgress> {
-        let job = self.jobs.get_mut(job_id)?;
+    pub fn list(&self) -> Vec<&TrackedJob> {
+        let mut jobs: Vec<&TrackedJob> = self.jobs.values().collect();
+        jobs.sort_by(|a, b| a.id.cmp(&b.id));
+        jobs
+    }
+
+    pub fn len(&self) -> usize {
+        self.jobs.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.jobs.is_empty()
+    }
+
+    /// Run translate job — real llama.cpp when `backend` is Some and mode is Weights.
+    pub fn run_translate(
+        &mut self,
+        job_id: &str,
+        mode: InferenceMode,
+        backend: Option<&LlamaCppBackend>,
+    ) -> Result<JobProgress, RouterError> {
+        let job = self
+            .jobs
+            .get_mut(job_id)
+            .ok_or_else(|| RouterError::Scheduler(format!("unknown job {job_id}")))?;
         if job.cancelled {
-            return Some(progress(job, JobStatus::Cancelled, 1.0, Some("cancelled")));
+            return Ok(progress(job, JobStatus::Cancelled, 1.0, Some("cancelled")));
         }
         if job.paused {
-            return Some(progress(job, JobStatus::Paused, job.fraction, Some("paused")));
+            return Ok(progress(
+                job,
+                JobStatus::Paused,
+                job.fraction,
+                Some("paused"),
+            ));
         }
         job.status = JobStatus::Running;
         let target = job
@@ -116,16 +149,30 @@ impl JobRegistry {
                     .collect()
             })
             .unwrap_or_default();
-        let prefix = match mode {
-            InferenceMode::Weights => "",
-            InferenceMode::OfflineMock => "",
+
+        let translated: Vec<String> = match mode {
+            InferenceMode::OfflineMock => texts
+                .iter()
+                .map(|t| mock_translate_line(t, target))
+                .collect(),
+            InferenceMode::Weights => {
+                let llama = backend.ok_or_else(|| {
+                    RouterError::ModelNotInstalled("llama.cpp backend unavailable".into())
+                })?;
+                texts
+                    .iter()
+                    .map(|t| {
+                        llama
+                            .complete(&build_mt_prompt(t, target))
+                            .unwrap_or_else(|_| t.clone())
+                    })
+                    .collect()
+            }
         };
-        let _ = prefix;
-        let translated: Vec<String> = texts
-            .iter()
-            .map(|t| mock_translate_line(t, target))
-            .collect();
+
         let revision = format!("rev-{}", now_ms());
+        let provisional = matches!(mode, InferenceMode::OfflineMock);
+        let confidence = if provisional { 0.55 } else { 0.85 };
         job.fraction = 1.0;
         job.status = JobStatus::Succeeded;
         job.result = Some(json!({
@@ -133,22 +180,37 @@ impl JobRegistry {
                 "id": format!("t-{i}"),
                 "sourceCueIds": [format!("c-{i}")],
                 "text": text,
-                "confidence": if matches!(mode, InferenceMode::OfflineMock) { 0.55 } else { 0.85 },
-                "provisional": matches!(mode, InferenceMode::OfflineMock),
+                "confidence": confidence,
+                "provisional": provisional,
                 "revisionId": revision,
             })).collect::<Vec<_>>(),
             "revisionId": revision,
             "mode": format!("{mode:?}"),
         }));
-        Some(progress(
+        Ok(progress(
             job,
             JobStatus::Succeeded,
             1.0,
-            Some("translate complete (mock if weights absent)"),
+            Some(if provisional {
+                "translate complete (offline mock)"
+            } else {
+                "translate complete (llama.cpp)"
+            }),
         ))
     }
 
-    pub fn run_mock_page_translate(&mut self, job_id: &str) -> Option<Value> {
+    /// Run a mock translate job from source cue texts in payload.
+    pub fn run_mock_translate(&mut self, job_id: &str, mode: InferenceMode) -> Option<JobProgress> {
+        self.run_translate(job_id, mode, None).ok()
+    }
+
+    /// Page translate — real llama.cpp when `backend` is Some and mode is Weights.
+    pub fn run_page_translate(
+        &mut self,
+        job_id: &str,
+        mode: InferenceMode,
+        backend: Option<&LlamaCppBackend>,
+    ) -> Option<Value> {
         let job = self.jobs.get_mut(job_id)?;
         if job.cancelled {
             job.status = JobStatus::Cancelled;
@@ -166,6 +228,8 @@ impl JobRegistry {
             .and_then(|v| v.as_array())
             .cloned()
             .unwrap_or_default();
+        let provisional = matches!(mode, InferenceMode::OfflineMock);
+        let confidence = if provisional { 0.7 } else { 0.85 };
         let results: Vec<Value> = segments
             .iter()
             .map(|seg| {
@@ -174,19 +238,34 @@ impl JobRegistry {
                     .get("originalText")
                     .and_then(|v| v.as_str())
                     .unwrap_or("");
+                let translated = match mode {
+                    InferenceMode::OfflineMock => mock_translate_line(original, target),
+                    InferenceMode::Weights => backend
+                        .and_then(|llama| llama.complete(&build_mt_prompt(original, target)).ok())
+                        .unwrap_or_else(|| original.to_string()),
+                };
                 json!({
                     "id": id,
-                    "translatedText": mock_translate_line(original, target),
-                    "confidence": 0.7,
-                    "provisional": true,
+                    "translatedText": translated,
+                    "confidence": confidence,
+                    "provisional": provisional,
                 })
             })
             .collect();
         job.status = JobStatus::Succeeded;
         job.fraction = 1.0;
-        let out = json!({ "results": results, "cacheHit": false });
+        let out = json!({
+            "results": results,
+            "cacheHit": false,
+            "mode": format!("{mode:?}"),
+        });
         job.result = Some(out.clone());
         Some(out)
+    }
+
+    /// Dev-only OfflineMock page translate (no weights / no backend).
+    pub fn run_mock_page_translate(&mut self, job_id: &str) -> Option<Value> {
+        self.run_page_translate(job_id, InferenceMode::OfflineMock, None)
     }
 }
 

@@ -88,12 +88,33 @@ impl MemoryStore {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RetentionPreset {
     Session,
     Days7,
     Days30,
     Keep,
+}
+
+impl RetentionPreset {
+    pub fn parse(s: &str) -> Option<Self> {
+        match s {
+            "session" => Some(Self::Session),
+            "days7" => Some(Self::Days7),
+            "days30" => Some(Self::Days30),
+            "keep" => Some(Self::Keep),
+            _ => None,
+        }
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Session => "session",
+            Self::Days7 => "days7",
+            Self::Days30 => "days30",
+            Self::Keep => "keep",
+        }
+    }
 }
 
 pub fn retention_ttl_ms(preset: RetentionPreset) -> Option<u64> {
@@ -103,6 +124,83 @@ pub fn retention_ttl_ms(preset: RetentionPreset) -> Option<u64> {
         RetentionPreset::Days30 => Some(30 * 24 * 60 * 60 * 1000),
         RetentionPreset::Keep => None,
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PrivacyWipeScope {
+    All,
+    Transcripts,
+    Translations,
+    Lyrics,
+    PageCache,
+    Study,
+    Dictionaries,
+}
+
+impl PrivacyWipeScope {
+    pub fn parse(s: &str) -> Option<Self> {
+        match s {
+            "all" => Some(Self::All),
+            "transcripts" => Some(Self::Transcripts),
+            "translations" => Some(Self::Translations),
+            "lyrics" => Some(Self::Lyrics),
+            "page-cache" => Some(Self::PageCache),
+            "study" => Some(Self::Study),
+            "dictionaries" => Some(Self::Dictionaries),
+            _ => None,
+        }
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::All => "all",
+            Self::Transcripts => "transcripts",
+            Self::Translations => "translations",
+            Self::Lyrics => "lyrics",
+            Self::PageCache => "page-cache",
+            Self::Study => "study",
+            Self::Dictionaries => "dictionaries",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TranslationRecord {
+    pub cues_json: String,
+    pub revision_id: String,
+    pub model_id: String,
+    pub model_revision: String,
+    pub target_lang: String,
+    pub source_hash: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StudyRecord {
+    pub id: String,
+    pub kind: String,
+    pub payload_json: String,
+    pub updated_at_ms: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DictionaryMeta {
+    pub id: String,
+    pub name: String,
+    pub language: String,
+    pub license: String,
+    pub entry_count: i64,
+    pub payload_path: String,
+    pub imported_at_ms: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DictionaryLookupHit {
+    pub entry_id: String,
+    pub dictionary_id: String,
+    pub surface: String,
+    pub reading: Option<String>,
+    pub glossary_json: Option<String>,
 }
 
 const MIGRATION_V1: &str = r#"
@@ -159,6 +257,31 @@ CREATE INDEX IF NOT EXISTS idx_page_url ON page_translate_cache(canonical_url);
 CREATE INDEX IF NOT EXISTS idx_study_kind ON study_data(kind);
 "#;
 
+const MIGRATION_V2: &str = r#"
+CREATE TABLE IF NOT EXISTS dictionaries (
+  id TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  language TEXT NOT NULL,
+  license TEXT NOT NULL,
+  entry_count INTEGER NOT NULL,
+  payload_path TEXT NOT NULL,
+  imported_at_ms INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS dictionary_entries (
+  id TEXT PRIMARY KEY NOT NULL,
+  dictionary_id TEXT NOT NULL,
+  surface TEXT NOT NULL,
+  reading TEXT,
+  glossary_json TEXT,
+  FOREIGN KEY (dictionary_id) REFERENCES dictionaries(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_dict_surface ON dictionary_entries(surface);
+CREATE TABLE IF NOT EXISTS prefs (
+  key TEXT PRIMARY KEY NOT NULL,
+  value TEXT NOT NULL
+);
+"#;
+
 /// SQLite-backed local store with schema migrations.
 pub struct SqliteStore {
     conn: Connection,
@@ -208,6 +331,14 @@ impl SqliteStore {
                 params![now],
             )?;
         }
+        if current < 2 {
+            self.conn.execute_batch(MIGRATION_V2)?;
+            let now = now_ms();
+            self.conn.execute(
+                "INSERT INTO schema_migrations (version, applied_at_ms) VALUES (2, ?1)",
+                params![now],
+            )?;
+        }
         Ok(())
     }
 
@@ -244,6 +375,20 @@ impl SqliteStore {
         Ok(row)
     }
 
+    pub fn get_latest_transcript(&self, video_id: &str) -> Result<Option<String>, StoreError> {
+        let row = self
+            .conn
+            .query_row(
+                "SELECT timeline_json FROM transcripts WHERE video_id=?1
+                 ORDER BY updated_at_ms DESC LIMIT 1",
+                params![video_id],
+                |r| r.get::<_, String>(0),
+            )
+            .optional()?;
+        Ok(row)
+    }
+
+    #[allow(clippy::too_many_arguments)]
     pub fn put_translation(
         &self,
         video_id: &str,
@@ -315,6 +460,7 @@ impl SqliteStore {
         Ok(n)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn put_page_segment(
         &self,
         key: &str,
@@ -373,6 +519,367 @@ impl SqliteStore {
         Ok(())
     }
 
+    pub fn get_translation(
+        &self,
+        video_id: &str,
+        source_hash: Option<&str>,
+    ) -> Result<Option<TranslationRecord>, StoreError> {
+        let row = if let Some(hash) = source_hash {
+            self.conn
+                .query_row(
+                    "SELECT cues_json, revision_id, model_id, model_revision, target_lang, source_hash
+                     FROM translations
+                     WHERE video_id=?1 AND source_hash=?2
+                     ORDER BY updated_at_ms DESC LIMIT 1",
+                    params![video_id, hash],
+                    |r| {
+                        Ok(TranslationRecord {
+                            cues_json: r.get(0)?,
+                            revision_id: r.get(1)?,
+                            model_id: r.get(2)?,
+                            model_revision: r.get(3)?,
+                            target_lang: r.get(4)?,
+                            source_hash: r.get(5)?,
+                        })
+                    },
+                )
+                .optional()?
+        } else {
+            self.conn
+                .query_row(
+                    "SELECT cues_json, revision_id, model_id, model_revision, target_lang, source_hash
+                     FROM translations
+                     WHERE video_id=?1
+                     ORDER BY updated_at_ms DESC LIMIT 1",
+                    params![video_id],
+                    |r| {
+                        Ok(TranslationRecord {
+                            cues_json: r.get(0)?,
+                            revision_id: r.get(1)?,
+                            model_id: r.get(2)?,
+                            model_revision: r.get(3)?,
+                            target_lang: r.get(4)?,
+                            source_hash: r.get(5)?,
+                        })
+                    },
+                )
+                .optional()?
+        };
+        Ok(row)
+    }
+
+    pub fn delete_transcripts_for_video(&self, video_id: &str) -> Result<usize, StoreError> {
+        let n = self.conn.execute(
+            "DELETE FROM transcripts WHERE video_id=?1",
+            params![video_id],
+        )?;
+        Ok(n)
+    }
+
+    pub fn get_study(&self, id: &str) -> Result<Option<StudyRecord>, StoreError> {
+        let row = self
+            .conn
+            .query_row(
+                "SELECT id, kind, payload_json, updated_at_ms FROM study_data WHERE id=?1",
+                params![id],
+                |r| {
+                    Ok(StudyRecord {
+                        id: r.get(0)?,
+                        kind: r.get(1)?,
+                        payload_json: r.get(2)?,
+                        updated_at_ms: r.get(3)?,
+                    })
+                },
+            )
+            .optional()?;
+        Ok(row)
+    }
+
+    pub fn list_study_by_kind(&self, kind: &str) -> Result<Vec<StudyRecord>, StoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, kind, payload_json, updated_at_ms FROM study_data WHERE kind=?1 ORDER BY updated_at_ms DESC",
+        )?;
+        let rows = stmt
+            .query_map(params![kind], |r| {
+                Ok(StudyRecord {
+                    id: r.get(0)?,
+                    kind: r.get(1)?,
+                    payload_json: r.get(2)?,
+                    updated_at_ms: r.get(3)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    pub fn delete_study(&self, id: &str) -> Result<bool, StoreError> {
+        let n = self
+            .conn
+            .execute("DELETE FROM study_data WHERE id=?1", params![id])?;
+        Ok(n > 0)
+    }
+
+    pub fn clear_page_cache(&self, canonical_url: Option<&str>) -> Result<usize, StoreError> {
+        let n = if let Some(url) = canonical_url {
+            self.conn.execute(
+                "DELETE FROM page_translate_cache WHERE canonical_url=?1",
+                params![url],
+            )?
+        } else {
+            self.conn.execute("DELETE FROM page_translate_cache", [])?
+        };
+        Ok(n)
+    }
+
+    pub fn privacy_wipe(
+        &self,
+        scope: PrivacyWipeScope,
+    ) -> Result<HashMap<String, usize>, StoreError> {
+        let mut cleared = HashMap::new();
+        let wipe = |table: &str| -> Result<usize, StoreError> {
+            let n = self.conn.execute(&format!("DELETE FROM {table}"), [])?;
+            Ok(n)
+        };
+        match scope {
+            PrivacyWipeScope::All => {
+                cleared.insert("transcripts".into(), wipe("transcripts")?);
+                cleared.insert("translations".into(), wipe("translations")?);
+                cleared.insert("lyrics".into(), wipe("lyrics_cache")?);
+                cleared.insert("page-cache".into(), wipe("page_translate_cache")?);
+                cleared.insert("study".into(), wipe("study_data")?);
+                cleared.insert("dictionaries".into(), wipe("dictionary_entries")?);
+                let _ = wipe("dictionaries")?;
+            }
+            PrivacyWipeScope::Transcripts => {
+                cleared.insert("transcripts".into(), wipe("transcripts")?);
+            }
+            PrivacyWipeScope::Translations => {
+                cleared.insert("translations".into(), wipe("translations")?);
+            }
+            PrivacyWipeScope::Lyrics => {
+                cleared.insert("lyrics".into(), wipe("lyrics_cache")?);
+            }
+            PrivacyWipeScope::PageCache => {
+                cleared.insert("page-cache".into(), wipe("page_translate_cache")?);
+            }
+            PrivacyWipeScope::Study => {
+                cleared.insert("study".into(), wipe("study_data")?);
+            }
+            PrivacyWipeScope::Dictionaries => {
+                let entries = wipe("dictionary_entries")?;
+                let dicts = wipe("dictionaries")?;
+                cleared.insert("dictionaries".into(), entries + dicts);
+            }
+        }
+        Ok(cleared)
+    }
+
+    pub fn put_dictionary_meta(&self, meta: &DictionaryMeta) -> Result<(), StoreError> {
+        self.conn.execute(
+            "INSERT INTO dictionaries (id, name, language, license, entry_count, payload_path, imported_at_ms)
+             VALUES (?1,?2,?3,?4,?5,?6,?7)
+             ON CONFLICT(id) DO UPDATE SET
+               name=excluded.name, language=excluded.language, license=excluded.license,
+               entry_count=excluded.entry_count, payload_path=excluded.payload_path,
+               imported_at_ms=excluded.imported_at_ms",
+            params![
+                meta.id,
+                meta.name,
+                meta.language,
+                meta.license,
+                meta.entry_count,
+                meta.payload_path,
+                meta.imported_at_ms
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_dictionary_meta(&self, id: &str) -> Result<Option<DictionaryMeta>, StoreError> {
+        let row = self
+            .conn
+            .query_row(
+                "SELECT id, name, language, license, entry_count, payload_path, imported_at_ms
+                 FROM dictionaries WHERE id=?1",
+                params![id],
+                |r| {
+                    Ok(DictionaryMeta {
+                        id: r.get(0)?,
+                        name: r.get(1)?,
+                        language: r.get(2)?,
+                        license: r.get(3)?,
+                        entry_count: r.get(4)?,
+                        payload_path: r.get(5)?,
+                        imported_at_ms: r.get(6)?,
+                    })
+                },
+            )
+            .optional()?;
+        Ok(row)
+    }
+
+    pub fn put_dictionary_entries(
+        &self,
+        dictionary_id: &str,
+        entries: &[(String, String, Option<String>, Option<String>)],
+    ) -> Result<usize, StoreError> {
+        let tx = self.conn.unchecked_transaction()?;
+        let mut n = 0usize;
+        for (entry_id, surface, reading, glossary_json) in entries {
+            tx.execute(
+                "INSERT INTO dictionary_entries (id, dictionary_id, surface, reading, glossary_json)
+                 VALUES (?1,?2,?3,?4,?5)
+                 ON CONFLICT(id) DO UPDATE SET
+                   surface=excluded.surface, reading=excluded.reading,
+                   glossary_json=excluded.glossary_json",
+                params![entry_id, dictionary_id, surface, reading, glossary_json],
+            )?;
+            n += 1;
+        }
+        tx.commit()?;
+        Ok(n)
+    }
+
+    pub fn lookup_dictionary(&self, surface: &str) -> Result<Vec<DictionaryLookupHit>, StoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, dictionary_id, surface, reading, glossary_json
+             FROM dictionary_entries WHERE surface=?1 LIMIT 50",
+        )?;
+        let rows = stmt
+            .query_map(params![surface], |r| {
+                Ok(DictionaryLookupHit {
+                    entry_id: r.get(0)?,
+                    dictionary_id: r.get(1)?,
+                    surface: r.get(2)?,
+                    reading: r.get(3)?,
+                    glossary_json: r.get(4)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    pub fn clear_dictionaries(&self) -> Result<usize, StoreError> {
+        let n_entries = self.conn.execute("DELETE FROM dictionary_entries", [])?;
+        let n_dicts = self.conn.execute("DELETE FROM dictionaries", [])?;
+        Ok(n_entries + n_dicts)
+    }
+
+    pub fn dictionary_stats(&self) -> Result<(usize, usize), StoreError> {
+        let dicts: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM dictionaries", [], |r| r.get(0))?;
+        let entries: i64 =
+            self.conn
+                .query_row("SELECT COUNT(*) FROM dictionary_entries", [], |r| r.get(0))?;
+        Ok((dicts as usize, entries as usize))
+    }
+
+    pub fn list_dictionaries(&self) -> Result<Vec<DictionaryMeta>, StoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, name, language, license, entry_count, payload_path, imported_at_ms
+             FROM dictionaries ORDER BY name ASC",
+        )?;
+        let rows = stmt
+            .query_map([], |r| {
+                Ok(DictionaryMeta {
+                    id: r.get(0)?,
+                    name: r.get(1)?,
+                    language: r.get(2)?,
+                    license: r.get(3)?,
+                    entry_count: r.get(4)?,
+                    payload_path: r.get(5)?,
+                    imported_at_ms: r.get(6)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    /// Approximate on-disk size of the SQLite file (and WAL/SHM siblings when present).
+    pub fn database_disk_bytes(&self) -> u64 {
+        let path = self.path();
+        let mut total = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
+        for suffix in ["-wal", "-shm"] {
+            let alt = PathBuf::from(format!("{}{suffix}", path.display()));
+            if let Ok(meta) = std::fs::metadata(&alt) {
+                total = total.saturating_add(meta.len());
+            }
+        }
+        total
+    }
+
+    pub fn set_retention_preset(&self, preset: RetentionPreset) -> Result<(), StoreError> {
+        self.conn.execute(
+            "INSERT INTO prefs (key, value) VALUES ('retention_preset', ?1)
+             ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+            params![preset.as_str()],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_retention_preset(&self) -> Result<RetentionPreset, StoreError> {
+        let row: Option<String> = self
+            .conn
+            .query_row(
+                "SELECT value FROM prefs WHERE key='retention_preset'",
+                [],
+                |r| r.get(0),
+            )
+            .optional()?;
+        Ok(row
+            .and_then(|s| RetentionPreset::parse(&s))
+            .unwrap_or(RetentionPreset::Days7))
+    }
+
+    pub fn purge_expired(&self, now_ms: i64) -> Result<HashMap<String, usize>, StoreError> {
+        let preset = self.get_retention_preset()?;
+        let Some(ttl) = retention_ttl_ms(preset) else {
+            return Ok(HashMap::new());
+        };
+        if ttl == 0 {
+            return Ok(HashMap::new());
+        }
+        let cutoff = now_ms - ttl as i64;
+        let mut purged = HashMap::new();
+        purged.insert(
+            "transcripts".into(),
+            self.conn.execute(
+                "DELETE FROM transcripts WHERE updated_at_ms < ?1",
+                params![cutoff],
+            )?,
+        );
+        purged.insert(
+            "translations".into(),
+            self.conn.execute(
+                "DELETE FROM translations WHERE updated_at_ms < ?1",
+                params![cutoff],
+            )?,
+        );
+        purged.insert(
+            "page-cache".into(),
+            self.conn.execute(
+                "DELETE FROM page_translate_cache WHERE updated_at_ms < ?1",
+                params![cutoff],
+            )?,
+        );
+        purged.insert(
+            "study".into(),
+            self.conn.execute(
+                "DELETE FROM study_data WHERE updated_at_ms < ?1",
+                params![cutoff],
+            )?,
+        );
+        purged.insert(
+            "lyrics".into(),
+            self.conn.execute(
+                "DELETE FROM lyrics_cache WHERE fetched_at_ms < ?1",
+                params![cutoff],
+            )?,
+        );
+        Ok(purged)
+    }
+
     pub fn clear_all_caches(&self) -> Result<(), StoreError> {
         self.conn.execute_batch(
             "DELETE FROM transcripts;
@@ -419,6 +926,11 @@ mod tests {
         store
             .put_translation("vid", "hash1", "mock", "1", "ja", "[]", "rev1")
             .unwrap();
+        let tr = store
+            .get_translation("vid", Some("hash1"))
+            .unwrap()
+            .unwrap();
+        assert_eq!(tr.revision_id, "rev1");
         let key = lyrics_cache_key(&"vid".into(), "lrclib");
         store
             .put_lyrics(&key, "vid", "lrclib", "[00:01.00]hi", "LRCLIB")
@@ -441,9 +953,51 @@ mod tests {
             store.get_page_segment(&page_key).unwrap().as_deref(),
             Some("こんにちは")
         );
-        store
-            .put_study("card1", "fsrs", r#"{"due":1}"#)
-            .unwrap();
+        store.put_study("card1", "fsrs", r#"{"due":1}"#).unwrap();
+        let study = store.get_study("card1").unwrap().unwrap();
+        assert_eq!(study.kind, "fsrs");
+        assert_eq!(store.list_study_by_kind("fsrs").unwrap().len(), 1);
+        assert!(store.delete_study("card1").unwrap());
         assert_eq!(store.clear_lyrics_prefix("lyrics|vid|").unwrap(), 1);
+        assert_eq!(store.delete_transcripts_for_video("vid").unwrap(), 1);
+        store.set_retention_preset(RetentionPreset::Days7).unwrap();
+        assert_eq!(
+            store.get_retention_preset().unwrap(),
+            RetentionPreset::Days7
+        );
+    }
+
+    #[test]
+    fn privacy_wipe_and_dictionary_lookup() {
+        let store = SqliteStore::open_in_memory().unwrap();
+        store.put_transcript("v1", "h1", r#"{"cues":[]}"#).unwrap();
+        store.put_study("s1", "note", r#"{"x":1}"#).unwrap();
+        let meta = DictionaryMeta {
+            id: "dict1".into(),
+            name: "Test".into(),
+            language: "ja".into(),
+            license: "CC".into(),
+            entry_count: 1,
+            payload_path: "/tmp/dict".into(),
+            imported_at_ms: now_ms(),
+        };
+        store.put_dictionary_meta(&meta).unwrap();
+        store
+            .put_dictionary_entries(
+                "dict1",
+                &[("e1".into(), "hello".into(), Some("ハロー".into()), None)],
+            )
+            .unwrap();
+        let hits = store.lookup_dictionary("hello").unwrap();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].reading.as_deref(), Some("ハロー"));
+        let (dicts, entries) = store.dictionary_stats().unwrap();
+        assert_eq!(dicts, 1);
+        assert_eq!(entries, 1);
+        let cleared = store.privacy_wipe(PrivacyWipeScope::Transcripts).unwrap();
+        assert_eq!(cleared.get("transcripts").copied(), Some(1));
+        assert!(store.get_transcript("v1", "h1").unwrap().is_none());
+        let all = store.privacy_wipe(PrivacyWipeScope::All).unwrap();
+        assert!(all.get("study").copied().unwrap_or(0) >= 1);
     }
 }

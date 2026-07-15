@@ -3,27 +3,39 @@
 Local-first Chrome extension + desktop companion for:
 
 1. **YouTube language suite** — caption-first subtitles, user-initiated tab capture ASR, context-aware translation, dictionaries, learning
-2. **Website translate** — Google Translate–like in-place DOM translation (local MT only)
+2. **Website translate** — in-place DOM translation (local MT only)
 3. **Song lyrics** — store-safe karaoke (captions → LRCLIB → import → ASR last)
 
-Inference stays on your machine. Network is for explicit model/dictionary download, signed updates, and optional attributed LRCLIB fetches.
+Inference stays on your machine. Network is for explicit model/dictionary download, optional attributed LRCLIB fetches, and (when configured) signed updates.
 
-See **[STATUS.md](./STATUS.md)** for what is shipped in-repo vs what needs GPU weights / store signing.
+**Default git branch:** **`main`**.
+
+Honest status lives in **[STATUS.md](./STATUS.md)**. Do not treat this README as a GA claim.
+
+## Status legend
+
+| Label | Meaning |
+| --- | --- |
+| **Implemented** | Code path exists in-repo and is covered by automated tests or intentional smoke wiring |
+| **Development fallback** | Labeled mock/stub used when weights, CLIs, or production pins are absent — never silent fake success in specialist paths |
+| **Weights-required** | Real ASR/MT/VLM needs verified local files under `models/weights/` plus CLIs |
+| **Manually verified** | Human / real-browser gate run and recorded — not assumed from unit tests |
+| **Deferred** | Needs store credentials, notarization secrets, native-speaker QA, or multi-month ops |
 
 ## Architecture
 
 ```
 apps/extension     Chrome MV3 (WXT + React/TS)
-apps/desktop       Tauri 2 / Rust companion (native messaging + loopback IPC)
+apps/desktop       Tauri 2 manager UI + Rust companion (native messaging + loopback WS)
 packages/*         protocol, ui, language-kits, page-translate, lyrics, learning, mt-core
 crates/*           media-pipeline, inference-router, subtitle-core, local-store
-models/catalog.json  license-aware model router catalog
-docs/architecture    ADRs, threat model, fidelity, source policy
+models/catalog.json  license-aware model router catalog (digests often PENDING_*)
+docs/              ADRs, privacy, enterprise, troubleshooting, licenses
 ```
 
-Hard constraints: **no automatic YouTube downloading**; **no proprietary lyric-site scraping**; **commercially redistributable model defaults** (Hy-MT2, MADLAD, Whisper, Qwen3.*, etc.).
+Hard constraints: **no automatic YouTube downloading**; **no proprietary lyric-site scraping**; **commercially redistributable model defaults** when packs are offered (Hy-MT2, MADLAD, Whisper, Qwen3.*, etc.).
 
-Application source is MIT ([LICENSE](./LICENSE)). Bundled or downloaded model weights and dictionaries keep their **own** upstream licenses — see [docs/licenses/model-matrix.md](./docs/licenses/model-matrix.md) and [models/README.md](./models/README.md). This repo does not relicense third-party weights.
+Application source is MIT ([LICENSE](./LICENSE)). Model weights and dictionaries keep **upstream** licenses — see [docs/licenses/model-matrix.md](./docs/licenses/model-matrix.md) and [docs/licenses/ATTRIBUTIONS.md](./docs/licenses/ATTRIBUTIONS.md).
 
 ## Prerequisites
 
@@ -36,39 +48,47 @@ Application source is MIT ([LICENSE](./LICENSE)). Bundled or downloaded model we
 ```bash
 corepack enable
 pnpm install
-pnpm verify          # pnpm tests + typecheck + cargo test --workspace
-# or separately:
-pnpm test
-pnpm typecheck
-cargo test --workspace
+pnpm verify          # JS tests + typecheck + cargo test --workspace (see scripts/verify.mjs)
 ```
 
 ## How to run
 
-### 1. Companion (loopback WebSocket)
+### 1. Companion — headless (CI / extension without window)
 
 ```bash
-# From repo root — binds 127.0.0.1:<ephemeral>, prints bootstrap JSON on stdout
-cargo run -p language-llm-desktop
-
-# Example stdout: {"ok":true,"port":54321,"bootstrapToken":"…","protocolVersion":"1.0.0"}
+cargo run -p language-llm-desktop -- --serve
+# Stdout bootstrap JSON: port + bootstrapToken + protocolVersion
 # Health: http://127.0.0.1:<port>/health
 # WS:     ws://127.0.0.1:<port>/v1?t=<bootstrapToken>
 ```
 
-Auth: client sends `auth.handshake.request` (see `@language-llm/protocol`); companion returns `sessionToken`. Jobs (`job.submit` translate / ASR / page-translate), `audio.chunk`, and opt-in `lyrics.resolve` work in **mock / stub** mode until weights land under `models/weights/`.
+Without `--serve`, the process still supports native-messaging / GUI entrypoints depending on how it is launched. Prefer `--serve` for loopback-only smoke.
 
-SQLite DB defaults to `%APPDATA%/language-llm/local-store.sqlite` (or `$XDG_DATA_HOME` / macOS Application Support). Override with `LANGUAGE_LLM_DATA_DIR`.
+Auth: client sends `auth.handshake.request` (`@language-llm/protocol`); companion returns `sessionToken`. Translate / ASR / page-translate jobs use **real whisper/llama CLIs when verified weights are installed**; otherwise commercial paths use a labeled **OfflineMock** development fallback. Specialists return **model not installed** (not silent mock).
 
-### 2. Native messaging (extension bootstrap)
+SQLite defaults to the OS data dir under `language-llm/` (`dirs::data_dir()`, e.g. `%APPDATA%\language-llm` on Windows). Override with `LANGUAGE_LLM_DATA_DIR`.
 
-Register the host so the extension can discover port + token. Installers write an absolute-path wrapper (Chrome does not pass `--native-messaging` via the JSON manifest) and OS registration:
+### 2. Desktop manager (Tauri 2)
+
+**Implemented** as a real Tauri 2 app with React + `@language-llm/ui` views (Overview, Models, Dictionaries, Storage & privacy, Jobs, Hardware, Diagnostics, Licenses, Updates). Updater **pubkey is a placeholder** until release secrets exist — do not claim signing/notarization works yet.
 
 ```bash
-# Build release binary first
-cargo build -p language-llm-desktop --release
+pnpm --filter @language-llm/desktop tauri:dev   # builds with --features gui
+```
 
-# Load unpacked extension once, copy its ID from chrome://extensions, then:
+Pin the extension for release WS Origin checks:
+
+- `LANGUAGE_LLM_EXTENSION_ID=<chrome-extension-id>`, or
+- `data_dir/extension_id` (Overview → Pin ID / Repair native host)
+
+### 3. Native messaging (extension bootstrap)
+
+Host name: **`com.languagellm.companion`**.
+
+```bash
+cargo build -p language-llm-desktop --release
+# Load unpacked extension once, copy ID from chrome://extensions, then:
+
 # Windows
 powershell -File apps/desktop/scripts/register-windows.ps1 -ExtensionId <id>
 
@@ -77,78 +97,63 @@ powershell -File apps/desktop/scripts/register-windows.ps1 -ExtensionId <id>
 ./apps/desktop/scripts/register-linux.sh <id>
 ```
 
-Uninstall: `uninstall-windows.ps1` / `uninstall-macos.sh` / `uninstall-linux.sh`.
+Uninstall native host: `uninstall-windows.ps1` / `uninstall-macos.sh` / `uninstall-linux.sh`.  
+Full steps: [apps/desktop/scripts/README.md](./apps/desktop/scripts/README.md).  
+Data removal / wipe: [docs/privacy.md](./docs/privacy.md) and [docs/troubleshooting.md](./docs/troubleshooting.md).
 
-Verify handshake: open the popup → **Companion: ok** (native bootstrap → WebSocket → `session.ping`). Full steps: `apps/desktop/scripts/README.md`.
-
-Manual native mode (without Chrome):
-
-```bash
-LANGUAGE_LLM_NATIVE=1 target/release/language-llm-desktop
-# or: language-llm-desktop --native-messaging
-```
-
-### 3. Extension (unpacked)
+### 4. Extension (unpacked)
 
 ```bash
 pnpm --filter @language-llm/extension dev
 # Load apps/extension/.output/chrome-mv3-dev in chrome://extensions
 ```
 
-Popup actions:
+Surfaces: popup (launcher), YouTube overlay, side panel, page-translate toolbar. Density profiles **Focus / Balanced / Expert** via `@language-llm/ui` (`ProfilePicker`).
 
-- **Companion** status (native + WS)
-- **Translate this page** + grant/revoke `http(s)://*` host permission
-- **Transcribe this tab** (gesture-gated tabCapture → offscreen PCM → companion ASR; stub until whisper.cpp)
-- **Learn** — FSRS review (due cards, Again/Hard/Good/Easy, CSV copy); mine cues with **Alt+M** on the overlay
-- **Dictionaries** — import JMdict / CC-CEDICT / Kaikki JSONL, local lemma lookup
-- **Allow LRCLIB lyrics fetch** toggle + **Fetch LRCLIB** / **Import LRC**
+Live YouTube caption SPA behavior and gesture-gated `tabCapture` are **not** claimed as manually verified in CI — see STATUS.md.
 
-Overlay shortcuts (Alt+letter, or focused overlay): **S** source, **T** translation, **R** reveal, **M** mine, **K** known, **?** help.
+## Local models
 
-YouTube content script smoke: captions → mock MT → optional VLM gate (mock evidence) → overlay.
-
-## How to drop weights (local inference)
-
-Weights are **not** committed. Until files land under `models/weights/`, Whisper / Hy-MT2 / MADLAD stay on structured offline mocks. Specialists return **model not installed** instead of silently mocking.
+Weights are **not** committed. Until verified files land under `models/weights/<id>/` with a real SHA-256 (not `sha256:PENDING_*`) and a `.installed` marker, Whisper / Hy-MT2 / MADLAD stay on labeled offline mocks.
 
 ```
 <repo-or-LANGUAGE_LLM_DATA_DIR>/
   models/catalog.json
   models/bin/                          # optional: whisper-cli / llama-cli
   models/weights/<model-id>/
-    model.gguf                         # or .onnx / NeMo pack
-    .installed                         # written after SHA-256 verify
+    model.gguf
+    .installed                         # only after digest verify
 ```
 
-1. Accept the model license (see `docs/licenses/model-matrix.md`).
-2. Download the GGUF/ONNX pack into `models/weights/<catalog-id>/`.
-3. Optionally place `whisper-cli` / `llama-cli` under `models/bin/` (or set `LANGUAGE_LLM_WHISPER_CLI` / `LANGUAGE_LLM_LLAMA_CLI`).
-4. Replace `sha256:PENDING_*` in `catalog.json` with the real digest, then verify via the companion model manager.
-5. Restart the companion.
-
-Env overrides: `LANGUAGE_LLM_DATA_DIR`, `LANGUAGE_LLM_BIN_DIR`, `LANGUAGE_LLM_WHISPER_CLI`, `LANGUAGE_LLM_LLAMA_CLI`.
-
 Details: [models/README.md](./models/README.md).
+
+## Accessibility shortcuts (overlay)
+
+Alt+letter chords (or focused overlay): **S** source · **T** translation · **R** reveal · **M** mine · **K** known · **?** help · **Esc** blur.  
+Do not steal YouTube keys when the overlay is unfocused. Full list: [docs/troubleshooting.md](./docs/troubleshooting.md#accessibility-shortcuts).
 
 ## Legal / source constraints
 
 - **No YouTube downloading** — caption track on page → user-initiated `tabCapture` → owned-media import only
-- Page translate: on-device text only; originals recoverable
+- Page translate: on-device text; originals recoverable
 - Lyrics: captions / LRCLIB (attributed) / user import / ASR — never Genius-style scrapers
 - Local-first: inference and transcripts stay on device
 
-## Design
+## Contributing & community
 
-Ink `#111318`, Paper `#F7F8FA`, Signal Blue `#2F6FED`, Amber Evidence `#C47B17` — Atkinson Hyperlegible + Noto + IBM Plex Mono. Signature: context ribbon + evidence gutter.
+- [CONTRIBUTING.md](./CONTRIBUTING.md) · [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)
+- [SECURITY.md](./SECURITY.md) · [CHANGELOG.md](./CHANGELOG.md)
+- [docs/privacy.md](./docs/privacy.md) · [docs/enterprise-chrome.md](./docs/enterprise-chrome.md)
 
-## Contributing
+## Docs index
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md).
-
-## Docs
-
-- [STATUS.md](./STATUS.md) — what works vs what needs weights/hardware
-- [docs/architecture](./docs/architecture/README.md) — ADRs, threat model, fidelity, source policy
-- [docs/licenses/model-matrix.md](./docs/licenses/model-matrix.md) — model and dictionary license posture
-- [models/README.md](./models/README.md) — catalog and weight install paths
+| Doc | Purpose |
+| --- | --- |
+| [STATUS.md](./STATUS.md) | Implemented vs fallback vs weights vs manual vs deferred |
+| [docs/architecture](./docs/architecture/README.md) | ADRs, threat model, fidelity, source policy |
+| [docs/licenses/model-matrix.md](./docs/licenses/model-matrix.md) | License posture |
+| [docs/licenses/ATTRIBUTIONS.md](./docs/licenses/ATTRIBUTIONS.md) | Attribution / notice text |
+| [docs/privacy.md](./docs/privacy.md) | Retention, wipe, uninstall |
+| [docs/troubleshooting.md](./docs/troubleshooting.md) | IDs, companion, models, a11y |
+| [docs/enterprise-chrome.md](./docs/enterprise-chrome.md) | Enterprise / force-install guidance |
+| [apps/desktop/README.md](./apps/desktop/README.md) | Tauri manager modes |

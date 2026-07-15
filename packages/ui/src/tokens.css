@@ -1,13 +1,12 @@
 /**
  * Design tokens — Language-LLM
  *
- * Fonts (load in host app):
- * - Atkinson Hyperlegible (UI + captions; high legibility)
- * - Noto Sans (broad script coverage)
- * - IBM Plex Mono (timestamps, ids, evidence codes)
+ * Font stacks prefer local Atkinson Hyperlegible / IBM Plex Mono when installed;
+ * multilingual text uses script-aware Noto / system stacks (no remote fonts).
  */
 
-:root {
+:root,
+:host {
   --llm-ink: #111318;
   --llm-paper: #f7f8fa;
   --llm-signal-blue: #2f6fed;
@@ -15,19 +14,97 @@
   --llm-error-red: #b42318;
   --llm-muted-slate: #667085;
 
-  --llm-font-ui: "Atkinson Hyperlegible", "Noto Sans", sans-serif;
-  --llm-font-script: "Noto Sans", "Atkinson Hyperlegible", sans-serif;
-  --llm-font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --llm-font-ui: "Atkinson Hyperlegible", "Noto Sans", "Segoe UI", sans-serif;
+  --llm-font-script: "Noto Sans", "Noto Sans JP", "Noto Sans SC", "Noto Sans KR",
+    "Noto Sans Arabic", "Atkinson Hyperlegible", sans-serif;
+  --llm-font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", monospace;
 
-  --llm-focus-ring: 0 0 0 3px color-mix(in srgb, var(--llm-signal-blue) 55%, transparent);
+  --llm-focus-ring: 0 0 0 3px
+    color-mix(in srgb, var(--llm-signal-blue) 55%, transparent);
   --llm-focus-offset: 2px;
 
-  --llm-space-1: 0.25rem;
-  --llm-space-2: 0.5rem;
-  --llm-space-3: 0.75rem;
-  --llm-space-4: 1rem;
+  --llm-space-1: calc(0.25rem * var(--llm-space-scale, 1));
+  --llm-space-2: calc(0.5rem * var(--llm-space-scale, 1));
+  --llm-space-3: calc(0.75rem * var(--llm-space-scale, 1));
+  --llm-space-4: calc(1rem * var(--llm-space-scale, 1));
   --llm-radius: 2px;
   --llm-overlay-max-width: min(42rem, 92vw);
+
+  /* Density defaults (Balanced) */
+  --llm-density: balanced;
+  --llm-type-scale: 1;
+  --llm-space-scale: 1;
+  --llm-caption-max-ch: 48;
+  --llm-evidence-visible: 1;
+  --llm-diagnostics-visible: 0;
+}
+
+[data-llm-theme="dark"],
+:root[data-llm-theme="dark"],
+:host([data-llm-theme="dark"]) {
+  --llm-ink: #f2f4f7;
+  --llm-paper: #12141a;
+  --llm-signal-blue: #5b8def;
+  --llm-amber-evidence: #e0a03a;
+  --llm-error-red: #f04438;
+  --llm-muted-slate: #98a2b3;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-llm-theme="light"]),
+  :host(:not([data-llm-theme="light"])) {
+    --llm-ink: #f2f4f7;
+    --llm-paper: #12141a;
+    --llm-signal-blue: #5b8def;
+    --llm-amber-evidence: #e0a03a;
+    --llm-error-red: #f04438;
+    --llm-muted-slate: #98a2b3;
+  }
+
+  :root[data-llm-theme="light"],
+  :host([data-llm-theme="light"]) {
+    --llm-ink: #111318;
+    --llm-paper: #f7f8fa;
+    --llm-signal-blue: #2f6fed;
+    --llm-amber-evidence: #c47b17;
+    --llm-error-red: #b42318;
+    --llm-muted-slate: #667085;
+  }
+}
+
+[data-llm-density="focus"] {
+  --llm-density: focus;
+  --llm-type-scale: 1.05;
+  --llm-space-scale: 0.9;
+  --llm-caption-max-ch: 42;
+  --llm-evidence-visible: 0;
+  --llm-diagnostics-visible: 0;
+}
+
+[data-llm-density="balanced"] {
+  --llm-density: balanced;
+  --llm-type-scale: 1;
+  --llm-space-scale: 1;
+  --llm-caption-max-ch: 48;
+  --llm-evidence-visible: 1;
+  --llm-diagnostics-visible: 0;
+}
+
+[data-llm-density="expert"] {
+  --llm-density: expert;
+  --llm-type-scale: 0.94;
+  --llm-space-scale: 0.85;
+  --llm-caption-max-ch: 56;
+  --llm-evidence-visible: 1;
+  --llm-diagnostics-visible: 1;
+}
+
+.llm-surface {
+  font-family: var(--llm-font-ui);
+  color: var(--llm-ink);
+  background: var(--llm-paper);
+  font-size: calc(1rem * var(--llm-type-scale, 1));
+  line-height: 1.4;
 }
 
 .llm-focus-ring:focus-visible {
@@ -36,9 +113,46 @@
   outline-offset: var(--llm-focus-offset);
 }
 
+.llm-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.llm-hide-focus [data-llm-chrome="nonessential"] {
+  display: none !important;
+}
+
+[data-llm-density="focus"] [data-llm-chrome="learning"],
+[data-llm-density="focus"] [data-llm-chrome="diagnostics"],
+[data-llm-density="focus"] [data-llm-chrome="evidence"] {
+  display: none !important;
+}
+
+[data-llm-density="balanced"] [data-llm-chrome="diagnostics"] {
+  display: none !important;
+}
+
+[data-llm-density="expert"] [data-llm-chrome="diagnostics"] {
+  display: block;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .llm-motion-safe {
     transition: none !important;
     animation: none !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root,
+  :host {
+    --llm-focus-ring: 0 0 0 3px var(--llm-signal-blue);
   }
 }

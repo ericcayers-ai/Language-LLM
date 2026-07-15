@@ -47,7 +47,11 @@ export function evaluateMtSamples(samples: MtSample[]): MtEvalReport {
   };
 }
 
-export function runMtHarnessFixture(): MtEvalReport {
+/**
+ * Synthetic chrF metric smoke only — not release-quality language-pair evidence.
+ * Classification: fixture-metric-smoke.
+ */
+export function runMtSyntheticMetricSmoke(): MtEvalReport {
   return evaluateMtSamples([
     {
       id: "ja-en-1",
@@ -64,4 +68,9 @@ export function runMtHarnessFixture(): MtEvalReport {
       hypothesis: "China is big",
     },
   ]);
+}
+
+/** @deprecated Alias — prefer runMtSyntheticMetricSmoke. */
+export function runMtHarnessFixture(): MtEvalReport {
+  return runMtSyntheticMetricSmoke();
 }

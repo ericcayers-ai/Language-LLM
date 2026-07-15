@@ -82,7 +82,8 @@ pub fn run_native_messaging(state: Arc<CompanionState>) -> io::Result<()> {
 }
 
 fn write_message(out: &mut impl Write, value: &serde_json::Value) -> io::Result<()> {
-    let bytes = serde_json::to_vec(value).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+    let bytes =
+        serde_json::to_vec(value).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
     let len = (bytes.len() as u32).to_ne_bytes();
     out.write_all(&len)?;
     out.write_all(&bytes)?;

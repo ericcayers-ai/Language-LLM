@@ -5,18 +5,129 @@ on:
     branches: [main, master]
   pull_request:
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  # Fixture Playwright suites are headless-safe; headed extension load is opt-in.
+  VERIFY_SKIP_PLAYWRIGHT: "0"
+
 jobs:
-  rust:
-    runs-on: ubuntu-latest
+  quality:
+    name: quality (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install Node deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm --filter @language-llm/extension-e2e exec playwright install chromium --with-deps
+
+      - name: Validators (catalog / licenses / protocol / native-host)
+        run: |
+          node scripts/validate-catalog.mjs
+          node scripts/validate-licenses.mjs
+          node scripts/check-protocol-parity.mjs
+          node scripts/validate-native-host.mjs
+
+      - name: Typecheck + lint
+        run: |
+          pnpm -r --filter "!@language-llm/extension" typecheck
+          pnpm --filter @language-llm/extension typecheck
+          pnpm -r lint
+
+      - name: Package + extension + benchmark tests
+        run: |
+          pnpm -r --filter "!@language-llm/extension" test
+          pnpm --filter @language-llm/extension test
+          pnpm --filter @language-llm/benchmarks test
+
+      - name: Rust fmt / clippy / test
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy --workspace --all-targets -- -D warnings
+          cargo test --workspace
+
+      - name: Fake CLI backends (inference-router)
+        run: cargo test -p inference-router -- --nocapture
+
+      - name: Extension production build + zip
+        run: |
+          pnpm --filter @language-llm/extension build
+          pnpm --filter @language-llm/extension zip
+
+      - name: Desktop frontend build
+        run: pnpm --filter @language-llm/desktop build
+
+      - name: Tauri crate check (headless default)
+        run: cargo check -p language-llm-desktop
+
+      - name: Playwright local fixtures
+        run: pnpm --filter @language-llm/extension-e2e test
+        env:
+          CI: "true"
+
+      - name: Upload extension artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-zip-${{ matrix.os }}
+          path: |
+            apps/extension/.output/*.zip
+            apps/extension/.output/chrome-mv3/**
+          if-no-files-found: warn
+
+  tauri-headless-bundle:
+    name: unsigned headless companion binary
+    needs: quality
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test --workspace
+      - name: Release binary (headless, unsigned)
+        run: cargo build -p language-llm-desktop --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: companion-headless-${{ matrix.os }}
+          path: |
+            target/release/language-llm-desktop
+            target/release/language-llm-desktop.exe
+          if-no-files-found: warn
 
-  node:
+  # GUI Tauri builds need WebKit/WebView + icons; optional / non-blocking until secrets+icon tooling exist.
+  tauri-gui-check:
+    name: tauri gui feature check (linux)
+    needs: quality
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
       - uses: pnpm/action-setup@v4
         with:
           version: 9.15.0
@@ -24,8 +135,13 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-      - run: pnpm install
-      - run: pnpm -r --filter "!@language-llm/extension" test
-      - run: pnpm --filter @language-llm/extension test
-      - run: pnpm -r --filter "!@language-llm/extension" typecheck
-      # Combined local entrypoint is `pnpm verify` (pnpm + cargo together).
+      - run: pnpm install --frozen-lockfile
+      - name: System deps for Tauri (WebKit)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+      - run: pnpm --filter @language-llm/desktop build
+      - name: cargo check --features gui
+        run: cargo check -p language-llm-desktop --features gui
+        env:
+          VERIFY_TAURI_GUI: "1"

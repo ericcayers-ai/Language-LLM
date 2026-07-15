@@ -15,6 +15,7 @@ export default defineConfig({
       "tabCapture",
       "nativeMessaging",
       "scripting",
+      "sidePanel",
     ],
     optional_host_permissions: ["http://*/*", "https://*/*"],
     host_permissions: [
@@ -25,6 +26,9 @@ export default defineConfig({
     ],
     action: {
       default_title: "Language-LLM",
+    },
+    side_panel: {
+      default_path: "sidepanel.html",
     },
     externally_connectable: {
       matches: [],

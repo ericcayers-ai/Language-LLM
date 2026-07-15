@@ -1,0 +1,37 @@
+# Dependabot configuration — keep GitHub Actions, npm, and Cargo within reviewable noise.
+
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    groups:
+      ui-and-build:
+        patterns:
+          - "vite*"
+          - "vitest*"
+          - "@types/*"
+          - "typescript"
+          - "wxt*"
+          - "react*"
+          - "@tauri-apps/*"
+
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+
+  - package-ecosystem: "cargo"
+    directory: "/apps/desktop/src-tauri"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5

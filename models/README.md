@@ -1,12 +1,14 @@
 # Model catalog and weights policy
 
+Local install, digests, and OfflineMock behavior. Attribution notices: [docs/licenses/ATTRIBUTIONS.md](../docs/licenses/ATTRIBUTIONS.md). Maturity labels: [STATUS.md](../STATUS.md).
+
 ## Catalog
 
-[`catalog.json`](./catalog.json) is the signed-ready source of truth for model identity, task, license class, hardware minimum, backend, and download hints.
+[`catalog.json`](./catalog.json) is the **signed-ready** source of truth for model identity, task, license class, hardware minimum, backend, and download hints. Live Ed25519 catalog signature verification in production release ops is still **Deferred** — SHA-256 per-pack digests + `.installed` markers are the **Implemented** integrity gate today.
 
 - `commercialDefault: true` packs may be offered without a research license screen.
 - `licenseClass: "research-opt-in"` packs (Tower+, NLLB-200, SeamlessM4T, XCOMET, Whale) require an explicit user acknowledgment and are never default-selected.
-- `sha256Placeholder` values are replaced with real digests after a verified first download; the catalog signature covers the canonical JSON including those digests.
+- `sha256Placeholder` / `sha256:PENDING_*` values must be replaced with **real** digests before production `.installed` markers; unsigned pending digests refuse verified install.
 
 ## Install paths (companion model manager)
 
@@ -28,9 +30,21 @@
 
 1. Build or download `whisper-cli` / `llama-cli` and place under `models/bin/` (or set `LANGUAGE_LLM_WHISPER_CLI` / `LANGUAGE_LLM_LLAMA_CLI` to absolute paths).
 2. Place a `.gguf` (or pack) under `models/weights/<catalog-model-id>/`.
-3. Update `sha256Placeholder` in `catalog.json` to the real digest; run install/verify so `.installed` is written.
-4. Restart the companion. `WhisperCppBackend` / `LlamaCppBackend` build real argv (`-m`, `-f` / `-p`) when CLI + weights exist.
-5. Integration tests use fake `.cmd` / shell CLIs that echo success so CI stays green without GPUs.
+3. Compute SHA-256 of the weight file and set the catalog digest to `sha256:<hex>` (no `PENDING_` prefix).
+4. Run companion model install/verify so `.installed` is written only on match.
+5. Restart the companion. `WhisperCppBackend` / `LlamaCppBackend` build real argv (`-m`, `-f` / `-p`) when CLI + weights exist.
+6. Integration tests use fake `.cmd` / shell CLIs that echo success so CI stays green without GPUs — those do **not** count as weights-verified product gates.
+
+### Verified digest checklist
+
+```text
+# Example (PowerShell): (Get-FileHash model.gguf -Algorithm SHA256).Hash.ToLower()
+# Example (Unix): shasum -a 256 model.gguf
+# Then: catalog entry sha256Placeholder → "sha256:<lowercase-hex>"
+# Confirm: models/weights/<id>/.installed exists after verify
+```
+
+Until digests are real, expect **Development fallback** (`OfflineMock`) for commercial Whisper/MT paths and **ModelNotInstalled** for specialists.
 
 ## Critical language facts (do not regress)
 

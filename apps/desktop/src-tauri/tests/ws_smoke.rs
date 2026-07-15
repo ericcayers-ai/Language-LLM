@@ -1,11 +1,11 @@
 //! Integration smoke: bind loopback WS, handshake, mock translate job.
 
+use futures_util::{SinkExt, StreamExt};
 use language_llm_desktop::{bind_loopback_server, CompanionState};
 use serde_json::json;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio_tungstenite::connect_async;
-use futures_util::{SinkExt, StreamExt};
 
 #[tokio::test]
 async fn websocket_handshake_and_mock_translate() {
@@ -19,7 +19,7 @@ async fn websocket_handshake_and_mock_translate() {
     let (port, _handle) = bind_loopback_server(Arc::clone(&state))
         .await
         .expect("bind");
-    let token = state.bootstrap_token.clone();
+    let token = state.bootstrap_token();
     let url = format!("ws://127.0.0.1:{port}/v1?t={token}");
 
     let (ws, _) = connect_async(&url).await.expect("connect");

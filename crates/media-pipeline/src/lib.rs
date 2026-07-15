@@ -3,6 +3,9 @@
 #![deny(unsafe_code)]
 
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::Write;
+use std::path::Path;
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -20,6 +23,8 @@ pub enum MediaError {
     NotFound(String),
     #[error("job not resumable: {0}")]
     NotResumable(String),
+    #[error("io: {0}")]
+    Io(String),
 }
 
 #[derive(Debug, Clone)]
@@ -60,6 +65,8 @@ pub struct CaptureJob {
     pub ring: RingBuffer,
     pub next_seq: u64,
     pub chunks_accepted: u64,
+    /// Last ASR segment index emitted (sample_len / 16_000) to throttle whisper invocations.
+    pub last_asr_segment: u64,
 }
 
 impl CaptureJob {
@@ -79,6 +86,7 @@ impl CaptureJob {
             ring: RingBuffer::new(ring_capacity),
             next_seq: 0,
             chunks_accepted: 0,
+            last_asr_segment: 0,
         }
     }
 }
@@ -102,11 +110,7 @@ impl CaptureJobQueue {
         job_id: impl Into<String>,
         video_id: impl Into<String>,
     ) -> &CaptureJob {
-        let job = CaptureJob::with_id(
-            job_id,
-            video_id,
-            TARGET_SAMPLE_RATE_HZ as usize * 30,
-        );
+        let job = CaptureJob::with_id(job_id, video_id, TARGET_SAMPLE_RATE_HZ as usize * 30);
         let id = job.id.clone();
         self.jobs.insert(id.clone(), job);
         self.jobs.get(&id).expect("just inserted")
@@ -180,6 +184,15 @@ impl CaptureJobQueue {
         self.jobs.get(job_id)
     }
 
+    pub fn mark_asr_segment(&mut self, job_id: &str, segment: u64) -> Result<(), MediaError> {
+        let job = self
+            .jobs
+            .get_mut(job_id)
+            .ok_or_else(|| MediaError::NotFound(job_id.into()))?;
+        job.last_asr_segment = segment;
+        Ok(())
+    }
+
     pub fn snapshot_pcm(&self, job_id: &str) -> Result<PcmMono, MediaError> {
         let job = self
             .jobs
@@ -201,6 +214,36 @@ pub fn pcm_i16_le_to_f32(bytes: &[u8]) -> Vec<f32> {
         .chunks_exact(2)
         .map(|c| i16::from_le_bytes([c[0], c[1]]) as f32 / 32768.0)
         .collect()
+}
+
+/// Write 16-bit PCM mono WAV (RIFF) for whisper.cpp `-f` input.
+pub fn write_wav_mono(path: impl AsRef<Path>, pcm: &PcmMono) -> Result<(), MediaError> {
+    if pcm.samples.is_empty() {
+        return Err(MediaError::Empty);
+    }
+    let pcm_bytes = f32_to_pcm_i16_le(&pcm.samples);
+    let data_len = pcm_bytes.len() as u32;
+    let byte_rate = pcm.sample_rate_hz * 2;
+    let mut header = Vec::with_capacity(44);
+    header.extend_from_slice(b"RIFF");
+    header.extend_from_slice(&(36 + data_len).to_le_bytes());
+    header.extend_from_slice(b"WAVE");
+    header.extend_from_slice(b"fmt ");
+    header.extend_from_slice(&16u32.to_le_bytes());
+    header.extend_from_slice(&1u16.to_le_bytes()); // PCM
+    header.extend_from_slice(&1u16.to_le_bytes()); // mono
+    header.extend_from_slice(&pcm.sample_rate_hz.to_le_bytes());
+    header.extend_from_slice(&byte_rate.to_le_bytes());
+    header.extend_from_slice(&2u16.to_le_bytes()); // block align
+    header.extend_from_slice(&16u16.to_le_bytes()); // bits per sample
+    header.extend_from_slice(b"data");
+    header.extend_from_slice(&data_len.to_le_bytes());
+
+    let mut file = File::create(path.as_ref()).map_err(|e| MediaError::Io(e.to_string()))?;
+    file.write_all(&header)
+        .and_then(|_| file.write_all(&pcm_bytes))
+        .map_err(|e| MediaError::Io(e.to_string()))?;
+    Ok(())
 }
 
 pub fn f32_to_pcm_i16_le(samples: &[f32]) -> Vec<u8> {

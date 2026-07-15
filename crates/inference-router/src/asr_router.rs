@@ -4,9 +4,7 @@
 //! Specialists (FireRedASR2S, Qwen3-ASR, Parakeet 0.6B v3, Canary-1B v2, …)
 //! return [`RouterError::ModelNotInstalled`] instead of silent mock success.
 
-use crate::{
-    CatalogModel, InferenceMode, ModelManager, RouterError,
-};
+use crate::{CatalogModel, InferenceMode, ModelManager, RouterError};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -101,13 +99,11 @@ pub fn default_asr_model_id(
 ///
 /// - `whisper-cpp` / `moonshine` (onnx commercial default): may return OfflineMock when absent.
 /// - FireRed / Qwen3-ASR / Parakeet / Canary and other specialists: error if not installed.
-pub fn plan_asr_job(
-    manager: &ModelManager,
-    model_id: &str,
-) -> Result<AsrJobPayload, RouterError> {
-    let model = manager.catalog.find(model_id).ok_or_else(|| {
-        RouterError::Catalog(format!("unknown ASR model id: {model_id}"))
-    })?;
+pub fn plan_asr_job(manager: &ModelManager, model_id: &str) -> Result<AsrJobPayload, RouterError> {
+    let model = manager
+        .catalog
+        .find(model_id)
+        .ok_or_else(|| RouterError::Catalog(format!("unknown ASR model id: {model_id}")))?;
     if model.task != "asr" && model.task != "aligner" {
         return Err(RouterError::Catalog(format!(
             "model {model_id} task={} is not asr",
@@ -195,8 +191,7 @@ mod tests {
 
     fn catalog_with_specialists() -> ModelCatalog {
         ModelCatalog::load_from_path(
-            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .join("../../models/catalog.json"),
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../models/catalog.json"),
         )
         .expect("repo catalog.json")
     }

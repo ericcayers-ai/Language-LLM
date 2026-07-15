@@ -49,7 +49,31 @@ export function buildAppliedMap(
 }
 
 /**
- * Mock offline translator for wiring tests until companion/models are present.
+ * True when dev-only MT fallback is permitted (tests / local extension dev).
+ * Production builds must route MT through the companion and never call mock.
+ */
+export function isDevelopmentMtFallbackAllowed(): boolean {
+  try {
+    const meta = import.meta as ImportMeta & { env?: { DEV?: boolean } };
+    if (meta.env?.DEV === true) return true;
+  } catch {
+    // import.meta unavailable
+  }
+  try {
+    if (
+      typeof process !== "undefined" &&
+      process.env?.NODE_ENV !== "production"
+    ) {
+      return true;
+    }
+  } catch {
+    // process unavailable
+  }
+  return false;
+}
+
+/**
+ * Dev/test-only mock translator. Production must not inject `[lang]` mock text.
  * Preserves numbers and URLs (fidelity-friendly stub).
  */
 export function mockTranslateSegment(

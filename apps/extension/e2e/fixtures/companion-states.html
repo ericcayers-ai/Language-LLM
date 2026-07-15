@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Companion state fixture</title>
+  </head>
+  <body>
+    <h1>Companion connection states (fixture)</h1>
+    <p>
+      Extension popup / sidepanel report companion ready / degraded / down.
+      This page only exposes a controllable stub for CI.
+    </p>
+    <pre id="companion-state" data-llm-fixture="companion">disconnected</pre>
+    <script type="module">
+      const el = document.getElementById("companion-state");
+      const states = [
+        "disconnected",
+        "connecting",
+        "ready",
+        "degraded",
+        "failed",
+      ];
+      window.__llmCompanionFixture = {
+        set(state) {
+          if (!states.includes(state)) throw new Error(`bad state ${state}`);
+          el.textContent = state;
+          el.dataset.state = state;
+        },
+        get() {
+          return el.dataset.state || el.textContent;
+        },
+      };
+    </script>
+  </body>
+</html>

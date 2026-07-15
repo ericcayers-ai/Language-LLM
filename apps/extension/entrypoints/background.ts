@@ -1,6 +1,7 @@
 import {
   ensureCompanionSession,
   NATIVE_HOST_NAME,
+  onMessage,
   sendAudioChunk,
   submitJob,
   type CompanionSession,
@@ -8,7 +9,36 @@ import {
 
 let session: CompanionSession | null = null;
 let captureJobId: string | null = null;
+let captureTabId: number | null = null;
 let audioSeq = 0;
+let fanInRegistered = false;
+
+/** Fan-in types forwarded to content as `{ type: "companion.event", event }`. */
+const CONTENT_FAN_IN = new Set([
+  "timeline.source",
+  "timeline.translation",
+  "job.progress",
+  "error",
+]);
+
+function isDemoVideoId(videoId: string): boolean {
+  return videoId.startsWith("demo_");
+}
+
+function registerCompanionFanIn(): void {
+  if (fanInRegistered) return;
+  fanInRegistered = true;
+  onMessage((event) => {
+    if (typeof event !== "object" || event === null) return;
+    const type = (event as { type?: string }).type;
+    if (!type || !CONTENT_FAN_IN.has(type)) return;
+    if (captureTabId == null) return;
+    void chrome.tabs.sendMessage(captureTabId, {
+      type: "companion.event",
+      event,
+    });
+  });
+}
 
 export default defineBackground(() => {
   const fixtureTracks: Record<
@@ -52,15 +82,17 @@ export default defineBackground(() => {
     void (async () => {
       switch (message?.type) {
         case "captions.list": {
-          const tracks =
-            fixtureTracks[message.videoId as string] ??
-            fixtureTracks.demo_human ??
-            [];
+          const vid = String(message.videoId ?? "");
+          const tracks = isDemoVideoId(vid) ? (fixtureTracks[vid] ?? []) : [];
           sendResponse(tracks);
           break;
         }
         case "captions.fetch-events": {
           const vid = String(message.videoId ?? "");
+          if (!isDemoVideoId(vid)) {
+            sendResponse([]);
+            break;
+          }
           if (vid === "demo_empty" || vid === "demo_none") {
             sendResponse([]);
             break;
@@ -92,16 +124,18 @@ export default defineBackground(() => {
         case "capture.start": {
           try {
             session = await ensureCompanionSession(session);
+            registerCompanionFanIn();
             const jobId = crypto.randomUUID();
             captureJobId = jobId;
             audioSeq = 0;
+            const tabId = sender.tab?.id ?? (await activeTabId());
+            captureTabId = tabId ?? null;
             submitJob(session, {
               jobId,
               kind: "asr",
               videoId: String(message.videoId ?? "live"),
             });
             await ensureOffscreen();
-            const tabId = sender.tab?.id ?? (await activeTabId());
             chrome.runtime.sendMessage({
               type: "offscreen.capture",
               videoId: message.videoId,
@@ -120,6 +154,7 @@ export default defineBackground(() => {
         case "capture.chunk": {
           try {
             session = await ensureCompanionSession(session);
+            registerCompanionFanIn();
             const jobId = String(message.jobId ?? captureJobId ?? "");
             if (!jobId) {
               sendResponse({ ok: false, error: "no-capture-job" });
@@ -148,13 +183,40 @@ export default defineBackground(() => {
               jobId: captureJobId,
             });
           }
+          chrome.runtime.sendMessage({ type: "offscreen.stop" });
           captureJobId = null;
+          captureTabId = null;
+          sendResponse({ ok: true });
+          break;
+        }
+        case "capture.pause": {
+          if (session && captureJobId) {
+            session.send({
+              type: "job.pause",
+              sessionToken: session.token,
+              jobId: captureJobId,
+            });
+          }
+          chrome.runtime.sendMessage({ type: "offscreen.pause" });
+          sendResponse({ ok: true });
+          break;
+        }
+        case "capture.resume": {
+          if (session && captureJobId) {
+            session.send({
+              type: "job.resume",
+              sessionToken: session.token,
+              jobId: captureJobId,
+            });
+          }
+          chrome.runtime.sendMessage({ type: "offscreen.resume" });
           sendResponse({ ok: true });
           break;
         }
         case "companion.ping": {
           try {
             session = await ensureCompanionSession(session);
+            registerCompanionFanIn();
             session.send({
               type: "session.ping",
               sessionToken: session.token,
@@ -163,6 +225,7 @@ export default defineBackground(() => {
             await session.waitType("session.pong", 3000);
             sendResponse({
               ok: true,
+              ws: true,
               port: session.port,
               protocolVersion: "1.0.0",
             });
@@ -172,7 +235,8 @@ export default defineBackground(() => {
                 NATIVE_HOST_NAME,
                 { type: "bootstrap" },
               );
-              sendResponse({ ok: true, bootstrap: res, ws: false });
+              // Native-only is explicitly degraded — never look like full ready.
+              sendResponse({ ok: true, bootstrap: res, ws: false, degraded: true });
             } catch (inner) {
               sendResponse({
                 ok: false,
@@ -185,9 +249,36 @@ export default defineBackground(() => {
           }
           break;
         }
+        case "ui.open-sidepanel": {
+          try {
+            const windowId =
+              sender.tab?.windowId ??
+              (await chrome.windows.getCurrent()).id;
+            const sidePanel = (
+              chrome as typeof chrome & {
+                sidePanel?: {
+                  open: (opts: { windowId: number }) => Promise<void>;
+                };
+              }
+            ).sidePanel;
+            if (windowId != null && sidePanel?.open) {
+              await sidePanel.open({ windowId });
+              sendResponse({ ok: true });
+            } else {
+              sendResponse({ ok: false, error: "side-panel-unavailable" });
+            }
+          } catch (e) {
+            sendResponse({
+              ok: false,
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
+          break;
+        }
         case "companion.translate": {
           try {
             session = await ensureCompanionSession(session);
+            registerCompanionFanIn();
             const jobId = crypto.randomUUID();
             submitJob(session, {
               jobId,
@@ -214,6 +305,7 @@ export default defineBackground(() => {
               lyricsNetworkAllowed: Boolean(message.allowed),
             });
             session = await ensureCompanionSession(session);
+            registerCompanionFanIn();
             session.send({
               type: "settings.lyrics.network",
               sessionToken: session.token,
@@ -239,6 +331,7 @@ export default defineBackground(() => {
               break;
             }
             session = await ensureCompanionSession(session);
+            registerCompanionFanIn();
             session.send({
               type: "settings.lyrics.network",
               sessionToken: session.token,
@@ -266,7 +359,6 @@ export default defineBackground(() => {
           break;
         }
         case "lyrics.import-lrc": {
-          // Forward to active YouTube tab content script.
           const tabs = await chrome.tabs.query({
             active: true,
             currentWindow: true,
@@ -288,6 +380,202 @@ export default defineBackground(() => {
             origins: message.origins ?? ["http://*/*", "https://*/*"],
           });
           sendResponse({ granted });
+          break;
+        }
+        case "page-translate.submit": {
+          try {
+            session = await ensureCompanionSession(session);
+            registerCompanionFanIn();
+            const jobId = crypto.randomUUID();
+            submitJob(session, {
+              jobId,
+              kind: "page-translate",
+              videoId: String(message.canonicalUrl ?? "page"),
+              payload: {
+                segments: message.segments ?? [],
+                targetLang: message.targetLang ?? "en",
+                canonicalUrl: message.canonicalUrl ?? "",
+              },
+            });
+            const result = await session.waitType(
+              "page.translate.result",
+              60_000,
+            );
+            const results =
+              typeof result === "object" &&
+              result !== null &&
+              "results" in result
+                ? (result as { results: unknown }).results
+                : [];
+            sendResponse({ ok: true, results, jobId });
+          } catch (e) {
+            sendResponse({
+              ok: false,
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
+          break;
+        }
+        case "study.sync": {
+          try {
+            session = await ensureCompanionSession(session);
+            registerCompanionFanIn();
+            session.send({
+              type: "study.sync",
+              sessionToken: session.token,
+              op: message.op ?? "list",
+              kind: message.kind,
+              id: message.id,
+              payload: message.payload,
+            });
+            const result = await session.waitType("study.sync.result", 10_000);
+            sendResponse({ ok: true, result });
+          } catch (e) {
+            sendResponse({
+              ok: false,
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
+          break;
+        }
+        case "privacy.wipe": {
+          try {
+            session = await ensureCompanionSession(session);
+            registerCompanionFanIn();
+            session.send({
+              type: "privacy.wipe",
+              sessionToken: session.token,
+              scope: message.scope ?? "all",
+            });
+            const result = await session.waitType(
+              "privacy.wipe.result",
+              15_000,
+            );
+            sendResponse({ ok: true, result });
+          } catch (e) {
+            sendResponse({
+              ok: false,
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
+          break;
+        }
+        case "retention.set": {
+          try {
+            session = await ensureCompanionSession(session);
+            registerCompanionFanIn();
+            session.send({
+              type: "retention.set",
+              sessionToken: session.token,
+              preset: message.preset ?? "days7",
+            });
+            const result = await session.waitType("retention.status", 5_000);
+            sendResponse({ ok: true, result });
+          } catch (e) {
+            sendResponse({
+              ok: false,
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
+          break;
+        }
+        case "retention.get": {
+          try {
+            session = await ensureCompanionSession(session);
+            registerCompanionFanIn();
+            session.send({
+              type: "retention.get",
+              sessionToken: session.token,
+            });
+            const result = await session.waitType("retention.status", 5_000);
+            sendResponse({ ok: true, result });
+          } catch (e) {
+            sendResponse({
+              ok: false,
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
+          break;
+        }
+        case "timeline.hydrate": {
+          try {
+            session = await ensureCompanionSession(session);
+            registerCompanionFanIn();
+            session.send({
+              type: "timeline.hydrate",
+              sessionToken: session.token,
+              videoId: message.videoId,
+              sourceHash: message.sourceHash,
+            });
+            const result = await session.waitType("timeline.hydrated", 8_000);
+            sendResponse({ ok: true, result });
+          } catch (e) {
+            sendResponse({
+              ok: false,
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
+          break;
+        }
+        case "dictionary.lookup": {
+          try {
+            session = await ensureCompanionSession(session);
+            registerCompanionFanIn();
+            session.send({
+              type: "dictionary.lookup",
+              sessionToken: session.token,
+              surface: String(message.surface ?? ""),
+            });
+            const result = await session.waitType("dictionary.lookup", 8_000);
+            sendResponse({ ok: true, result });
+          } catch (e) {
+            sendResponse({
+              ok: false,
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
+          break;
+        }
+        case "dictionary.import": {
+          try {
+            session = await ensureCompanionSession(session);
+            registerCompanionFanIn();
+            session.send({
+              type: "dictionary.import",
+              sessionToken: session.token,
+              id: String(message.id ?? crypto.randomUUID()),
+              name: String(message.name ?? "imported"),
+              language: String(message.language ?? "und"),
+              license: String(message.license ?? "verify-before-redistribution"),
+              payloadPath: message.payloadPath,
+              entries: message.entries ?? [],
+            });
+            const result = await session.waitType("dictionary.import", 60_000);
+            sendResponse({ ok: true, result });
+          } catch (e) {
+            sendResponse({
+              ok: false,
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
+          break;
+        }
+        case "dictionary.stats": {
+          try {
+            session = await ensureCompanionSession(session);
+            registerCompanionFanIn();
+            session.send({
+              type: "dictionary.stats",
+              sessionToken: session.token,
+            });
+            const result = await session.waitType("dictionary.stats", 5_000);
+            sendResponse({ ok: true, result });
+          } catch (e) {
+            sendResponse({
+              ok: false,
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
           break;
         }
         default:

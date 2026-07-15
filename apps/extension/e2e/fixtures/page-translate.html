@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Page translate fixture</title>
+  </head>
+  <body>
+    <article id="article">
+      <h1 id="title">Sample article</h1>
+      <p id="p1">The quick brown fox jumps over the lazy dog.</p>
+      <p id="p2">Local inference stays on device.</p>
+    </article>
+    <div id="toolbar-host" data-llm-fixture="page-translate"></div>
+    <script type="module">
+      // Controlled stub mirroring apply/restore without requiring companion.
+      const originals = new Map();
+      window.__llmPageTranslate = {
+        apply(translations) {
+          for (const [id, text] of Object.entries(translations)) {
+            const el = document.getElementById(id);
+            if (!el) continue;
+            if (!originals.has(id)) originals.set(id, el.textContent);
+            el.textContent = text;
+            el.dataset.llmTranslated = "1";
+          }
+          document.documentElement.dataset.llmMode = "translated";
+        },
+        restore() {
+          for (const [id, text] of originals) {
+            const el = document.getElementById(id);
+            if (el) {
+              el.textContent = text;
+              delete el.dataset.llmTranslated;
+            }
+          }
+          originals.clear();
+          document.documentElement.dataset.llmMode = "original";
+        },
+        mode() {
+          return document.documentElement.dataset.llmMode || "original";
+        },
+      };
+    </script>
+  </body>
+</html>

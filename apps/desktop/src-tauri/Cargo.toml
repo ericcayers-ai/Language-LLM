@@ -3,15 +3,23 @@ name = "language-llm-desktop"
 version = "0.1.0"
 edition.workspace = true
 license.workspace = true
-description = "Tauri companion shell (installer, native host, loopback API)"
+description = "Tauri companion shell (installer, native host, loopback API, desktop manager)"
 
 [lib]
 name = "language_llm_desktop"
 path = "src/lib.rs"
+crate-type = ["rlib"]
 
 [[bin]]
 name = "language-llm-desktop"
 path = "src/main.rs"
+
+[features]
+default = []
+gui = ["dep:tauri", "dep:tauri-plugin-shell", "dep:tauri-plugin-dialog", "dep:tauri-plugin-process", "dep:tauri-plugin-updater"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
 
 [dependencies]
 language-llm-protocol = { workspace = true }
@@ -34,10 +42,14 @@ futures-util = { version = "0.3", default-features = false, features = ["sink"] 
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 dirs = "6"
+tauri = { version = "2", optional = true, features = ["tray-icon"] }
+tauri-plugin-shell = { version = "2", optional = true }
+tauri-plugin-dialog = { version = "2", optional = true }
+tauri-plugin-process = { version = "2", optional = true }
+tauri-plugin-updater = { version = "2", optional = true }
 
 [dev-dependencies]
 tokio = { workspace = true }
 tokio-tungstenite = "0.29"
 futures-util = { version = "0.3", default-features = false, features = ["sink"] }
 serde_json = { workspace = true }
-

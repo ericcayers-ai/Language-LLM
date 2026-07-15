@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { chrF, wordErrorRate, meanMidpointDriftMs } from "../src/metrics.js";
-import { runAsrHarnessFixture } from "./asr.js";
-import { runMtHarnessFixture } from "./mt.js";
-import { runSubtitleHarnessFixture } from "./subtitle.js";
-import { runAmbiguityHarnessFixture } from "./ambiguity.js";
-import { runPrivacyHarnessFixture } from "./privacy.js";
-import { runAccessibilityHarnessFixture } from "./accessibility.js";
+import { runAsrSyntheticMetricSmoke } from "./asr.js";
+import { runMtSyntheticMetricSmoke } from "./mt.js";
+import { runSubtitleSyntheticMetricSmoke } from "./subtitle.js";
+import { runAmbiguitySyntheticMetricSmoke } from "./ambiguity.js";
+import {
+  contrastRatio,
+  collectAccessibilityAssertions,
+  runAccessibilityHarness,
+} from "./accessibility.js";
+import { runPrivacyHarness } from "./privacy.js";
 
 describe("metric stubs", () => {
   it("computes WER", () => {
@@ -28,13 +32,34 @@ describe("metric stubs", () => {
   });
 });
 
-describe("harness fixtures", () => {
-  it("runs all suites", () => {
-    expect(runAsrHarnessFixture().sampleCount).toBe(2);
-    expect(runMtHarnessFixture().meanChrF).toBeGreaterThan(0);
-    expect(runSubtitleHarnessFixture().within100msRate).toBe(1);
-    expect(runAmbiguityHarnessFixture().precision).toBeLessThan(1);
-    expect(runPrivacyHarnessFixture().passRate).toBe(1);
-    expect(runAccessibilityHarnessFixture().passRate).toBe(1);
+describe("synthetic metric smokes (not release quality)", () => {
+  it("runs fixture-metric-smoke suites", () => {
+    expect(runAsrSyntheticMetricSmoke().sampleCount).toBe(2);
+    expect(runMtSyntheticMetricSmoke().meanChrF).toBeGreaterThan(0);
+    expect(runSubtitleSyntheticMetricSmoke().within100msRate).toBe(1);
+    expect(runAmbiguitySyntheticMetricSmoke().precision).toBeLessThan(1);
+  });
+});
+
+describe("accessibility / privacy source assertions", () => {
+  it("computes real contrast from tokens.ts", () => {
+    const checks = collectAccessibilityAssertions();
+    const light = checks.find((c) => c.id === "contrast-light");
+    expect(light?.passed).toBe(true);
+    expect(contrastRatio("#111318", "#F7F8FA")).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("passes accessibility harness with real checks", () => {
+    const report = runAccessibilityHarness();
+    expect(report.classification).toBe("static-source-assertions");
+    expect(report.failures).toEqual([]);
+    expect(report.passRate).toBe(1);
+  });
+
+  it("passes privacy harness with real checks", () => {
+    const report = runPrivacyHarness();
+    expect(report.classification).toBe("static-source-assertions");
+    expect(report.failures).toEqual([]);
+    expect(report.passRate).toBe(1);
   });
 });

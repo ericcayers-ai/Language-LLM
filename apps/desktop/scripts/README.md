@@ -4,6 +4,8 @@ Host name: `com.languagellm.companion`
 
 The companion speaks Chrome [native messaging](https://developer.chrome.com/docs/extensions/develop/concepts/native-messaging) (length-prefixed JSON on stdin/stdout) for **bootstrap only**. Streaming jobs use the loopback WebSocket returned by bootstrap.
 
+The Tauri desktop manager (Overview → **Repair native host**) performs the same registration in-app. These scripts remain for CI and headless installs.
+
 Installers write:
 
 1. A **wrapper script** with an absolute path that launches the binary with `--native-messaging` (Chrome does not pass argv/env via the JSON manifest).
@@ -100,4 +102,7 @@ cargo run -p language-llm-desktop
 
 - `allowed_origins` must list only your extension id (`chrome-extension://…/`).
 - Bootstrap returns loopback port + short-lived token; reject non-extension origins.
+- Release companions should pin the same ID via `LANGUAGE_LLM_EXTENSION_ID` or `data_dir/extension_id`.
 - Inference stays local; native messaging is bootstrap-only.
+
+Troubleshooting: [docs/troubleshooting.md](../../../docs/troubleshooting.md). Privacy wipe / uninstall data: [docs/privacy.md](../../../docs/privacy.md).

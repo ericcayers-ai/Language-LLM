@@ -7,6 +7,16 @@ import {
 } from "@language-llm/protocol";
 import type { JobKind, SessionToken } from "@language-llm/protocol";
 
+/** Companion loopback connection lifecycle (background authority). */
+export type ConnectionState =
+  | "disconnected"
+  | "native-only"
+  | "connecting"
+  | "ready"
+  | "degraded"
+  | "incompatible"
+  | "failed";
+
 export interface CompanionSession {
   token: SessionToken;
   expiresAtMs: number;
@@ -24,6 +34,58 @@ export interface BootstrapInfo {
   port: number;
   bootstrapToken: string;
   protocolVersion: string;
+}
+
+const FAN_IN_TYPES = new Set([
+  "timeline.source",
+  "timeline.translation",
+  "job.progress",
+  "error",
+  "lyrics.timeline",
+  "job.result",
+]);
+
+let connectionState: ConnectionState = "disconnected";
+const stateListeners = new Set<(state: ConnectionState) => void>();
+const fanInHandlers = new Set<(msg: unknown) => void>();
+let reconnectAttempt = 0;
+
+export function getConnectionState(): ConnectionState {
+  return connectionState;
+}
+
+/** Subscribe to connection state transitions. Returns unsubscribe. */
+export function onStateChange(
+  handler: (state: ConnectionState) => void,
+): () => void {
+  stateListeners.add(handler);
+  return () => stateListeners.delete(handler);
+}
+
+/**
+ * Persistent inbound fan-in for unpaired WS messages.
+ * Contract: background forwards these to content as `companion.event`.
+ */
+export function onMessage(handler: (msg: unknown) => void): () => void {
+  fanInHandlers.add(handler);
+  return () => fanInHandlers.delete(handler);
+}
+
+function setConnectionState(next: ConnectionState): void {
+  if (connectionState === next) return;
+  connectionState = next;
+  for (const listener of stateListeners) listener(next);
+}
+
+function dispatchFanIn(msg: unknown): void {
+  if (typeof msg !== "object" || msg === null) return;
+  const type = (msg as { type?: string }).type;
+  if (!type || !FAN_IN_TYPES.has(type)) return;
+  for (const handler of fanInHandlers) handler(msg);
+}
+
+function backoffMs(attempt: number): number {
+  return Math.min(30_000, 500 * 2 ** Math.min(attempt, 6));
 }
 
 /**
@@ -54,6 +116,7 @@ export async function connectCompanion(input: {
   if (input.port <= 0 || input.port > 65535) {
     throw new Error("invalid companion port");
   }
+  setConnectionState("connecting");
   const ws = new WebSocket(
     `ws://127.0.0.1:${input.port}/v1?t=${encodeURIComponent(input.bootstrapToken)}`,
   );
@@ -70,18 +133,24 @@ export async function connectCompanion(input: {
   const response = await waitMessage(ws, 5000);
   if (!isWsMessage(response) || !isAuthHandshakeResponse(response)) {
     ws.close();
+    setConnectionState("failed");
     throw new Error("companion handshake failed");
   }
   if (
     response.protocolVersion.split(".")[0] !== PROTOCOL_VERSION.split(".")[0]
   ) {
     ws.close();
+    setConnectionState("incompatible");
     throw new Error("protocol major mismatch");
   }
 
   const pending = new Map<
     string,
-    { resolve: (v: unknown) => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> }
+    {
+      resolve: (v: unknown) => void;
+      reject: (e: Error) => void;
+      timer: ReturnType<typeof setTimeout>;
+    }
   >();
   const queue: unknown[] = [];
 
@@ -106,8 +175,22 @@ export async function connectCompanion(input: {
       waiter.resolve(parsed);
       return;
     }
+    dispatchFanIn(parsed);
     queue.push(parsed);
   });
+
+  ws.addEventListener("close", () => {
+    if (connectionState === "ready" || connectionState === "degraded") {
+      setConnectionState("disconnected");
+    }
+  });
+
+  ws.addEventListener("error", () => {
+    setConnectionState("failed");
+  });
+
+  reconnectAttempt = 0;
+  setConnectionState("ready");
 
   return {
     token: response.sessionToken,
@@ -137,7 +220,7 @@ export async function connectCompanion(input: {
   };
 }
 
-/** Full bootstrap → WebSocket handshake used by the background service worker. */
+/** Full bootstrap → WebSocket handshake with bounded reconnect backoff. */
 export async function ensureCompanionSession(
   existing: CompanionSession | null,
 ): Promise<CompanionSession> {
@@ -149,12 +232,35 @@ export async function ensureCompanionSession(
     return existing;
   }
   existing?.close();
-  const boot = await nativeBootstrap();
-  return connectCompanion({
-    port: boot.port,
-    bootstrapToken: boot.bootstrapToken,
-    extensionId: chrome.runtime.id,
-  });
+
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const boot = await nativeBootstrap();
+      return await connectCompanion({
+        port: boot.port,
+        bootstrapToken: boot.bootstrapToken,
+        extensionId: chrome.runtime.id,
+      });
+    } catch (e) {
+      lastError = e;
+      reconnectAttempt = attempt + 1;
+      if (attempt < 4) {
+        setConnectionState("degraded");
+        await sleep(backoffMs(reconnectAttempt));
+      }
+    }
+  }
+
+  try {
+    await nativeBootstrap();
+    setConnectionState("native-only");
+  } catch {
+    setConnectionState("failed");
+  }
+  throw lastError instanceof Error
+    ? lastError
+    : new Error(String(lastError ?? "companion connect failed"));
 }
 
 export function submitJob(
@@ -233,4 +339,16 @@ function waitMessage(ws: WebSocket, timeoutMs: number): Promise<unknown> {
       { once: true },
     );
   });
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Test helper: reset module-level connection state. */
+export function __resetConnectionStateForTests(): void {
+  connectionState = "disconnected";
+  reconnectAttempt = 0;
+  stateListeners.clear();
+  fanInHandlers.clear();
 }

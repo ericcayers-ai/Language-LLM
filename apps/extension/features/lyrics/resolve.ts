@@ -14,8 +14,11 @@ export type LyricsResolveResult =
       ok: true;
       timeline: SourceTimeline;
       attribution: LyricsAttribution;
+      /** True when caption tracks were reused as lyrics — UI must confirm. */
+      requiresConfirmation?: boolean;
     }
   | { ok: false; reason: string; next: "lrclib" | "import" | "asr" | "none" };
+
 
 /**
  * Store-safe lyrics router. Proprietary scrapers are intentionally unsupported.
@@ -51,6 +54,7 @@ export function resolveLyricsLocal(input: {
       ok: true,
       timeline: input.pageCaptionTimeline,
       attribution: attributionFor("page-caption"),
+      requiresConfirmation: true,
     };
   }
   if (input.pageEmbeddedLrc) {

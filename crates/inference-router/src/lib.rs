@@ -18,7 +18,7 @@ pub use backends::{
 };
 
 use language_llm_protocol::{HardwareProfile, ModelLicenseClass, PowerPolicy};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -59,10 +59,7 @@ pub struct ScheduleHint {
 }
 
 pub fn prefer_sequential(profile: HardwareProfile) -> bool {
-    matches!(
-        profile,
-        HardwareProfile::Lite | HardwareProfile::Balanced
-    )
+    matches!(profile, HardwareProfile::Lite | HardwareProfile::Balanced)
 }
 
 pub fn probe_profile(ram_gb: u32, vram_gb: u32) -> HardwareProfile {
@@ -277,14 +274,15 @@ impl ModelManager {
         let actual = sha256_hex(bytes);
         if let Some(expected) = model.sha256_placeholder.as_deref() {
             let norm = normalize_digest(expected);
-            if norm.len() == 64 && norm.chars().all(|c| c.is_ascii_hexdigit()) {
-                if !digests_match(expected, &actual) {
-                    return Err(RouterError::Sha256Mismatch {
-                        id: model_id.into(),
-                        expected: expected.into(),
-                        actual,
-                    });
-                }
+            if norm.len() == 64
+                && norm.chars().all(|c| c.is_ascii_hexdigit())
+                && !digests_match(expected, &actual)
+            {
+                return Err(RouterError::Sha256Mismatch {
+                    id: model_id.into(),
+                    expected: expected.into(),
+                    actual,
+                });
             }
             // PENDING placeholders: still write file but do not mark verified.
         }
@@ -307,14 +305,39 @@ impl ModelManager {
         Ok(dest)
     }
 
+    /// Release installs require `.installed` plus digest match when catalog has a real SHA-256.
+    /// Dev mode (`LANGUAGE_LLM_DEV_CATALOG=1` or catalog `PENDING_*` digest): weight file presence suffices.
     pub fn is_installed(&self, model_id: &str) -> bool {
-        self.paths.marker_path(model_id).is_file()
-            || self
-                .paths
-                .model_dir(model_id)
-                .read_dir()
-                .map(|mut d| d.next().is_some())
-                .unwrap_or(false)
+        let model = self.catalog.find(model_id);
+        let catalog_digest = model.and_then(|m| m.sha256_placeholder.as_deref());
+        let dev_catalog = std::env::var("LANGUAGE_LLM_DEV_CATALOG").ok().as_deref() == Some("1");
+        let pending_catalog = catalog_digest
+            .map(|d| {
+                let norm = normalize_digest(d);
+                norm.starts_with("pending") || norm.contains("pending")
+            })
+            .unwrap_or(true);
+
+        let marker_path = self.paths.marker_path(model_id);
+        if marker_path.is_file() {
+            if let Some(expected) = catalog_digest {
+                let norm = normalize_digest(expected);
+                if norm.len() == 64 && norm.chars().all(|c| c.is_ascii_hexdigit()) {
+                    let marker_text = fs::read_to_string(&marker_path)
+                        .unwrap_or_default()
+                        .trim()
+                        .to_string();
+                    return digests_match(expected, &marker_text);
+                }
+            }
+            return true;
+        }
+
+        if dev_catalog || pending_catalog {
+            return discover_weight_file(&self.paths.model_dir(model_id)).is_some();
+        }
+
+        false
     }
 
     /// When weights are absent, callers should use offline mock adapters.
@@ -324,6 +347,132 @@ impl ModelManager {
         } else {
             Ok(InferenceMode::OfflineMock)
         }
+    }
+
+    /// Remove installed weight files and the `.installed` marker for a model.
+    pub fn remove_model(&self, model_id: &str) -> Result<bool, RouterError> {
+        let dir = self.paths.model_dir(model_id);
+        if !dir.exists() {
+            return Ok(false);
+        }
+        fs::remove_dir_all(&dir).map_err(|e| RouterError::Io(e.to_string()))?;
+        Ok(true)
+    }
+
+    /// Re-verify digests for an already-on-disk model; returns false when not installed.
+    pub fn verify_model(&self, model_id: &str) -> Result<ModelVerifyReport, RouterError> {
+        let model = self
+            .catalog
+            .find(model_id)
+            .ok_or_else(|| RouterError::Catalog(format!("unknown model {model_id}")))?;
+        let installed = self.is_installed(model_id);
+        let marker = self.paths.marker_path(model_id);
+        let weight = discover_weight_file(&self.paths.model_dir(model_id));
+        let file_digest = weight.as_ref().and_then(|p| sha256_file(p).ok());
+        let expected = model.sha256_placeholder.clone();
+        let digest_ok = match (expected.as_deref(), file_digest.as_deref()) {
+            (Some(exp), Some(act)) => {
+                let norm = normalize_digest(exp);
+                if norm.len() == 64 && norm.chars().all(|c| c.is_ascii_hexdigit()) {
+                    digests_match(exp, act)
+                } else {
+                    true // pending placeholders cannot fail digest equality yet
+                }
+            }
+            _ => installed,
+        };
+        Ok(ModelVerifyReport {
+            model_id: model_id.to_string(),
+            installed,
+            digest_ok,
+            expected_digest: expected,
+            actual_digest: file_digest,
+            marker_present: marker.is_file(),
+            weight_path: weight.map(|p| p.display().to_string()),
+        })
+    }
+
+    /// Bytes used under `models/weights/{id}` (0 when absent).
+    pub fn model_disk_bytes(&self, model_id: &str) -> u64 {
+        dir_size_bytes(&self.paths.model_dir(model_id))
+    }
+
+    /// Total bytes under the weights root.
+    pub fn weights_disk_bytes(&self) -> u64 {
+        dir_size_bytes(&self.paths.weights_dir)
+    }
+
+    pub fn list_catalog_status(&self) -> Vec<ModelStatusEntry> {
+        self.catalog
+            .models
+            .iter()
+            .map(|m| ModelStatusEntry {
+                id: m.id.clone(),
+                family: m.family.clone(),
+                task: m.task.clone(),
+                license_class: m.license_class.clone(),
+                commercial_default: m.commercial_default.unwrap_or(false),
+                hardware_min: m.hardware_min.clone(),
+                backend: m.backend.clone(),
+                installed: self.is_installed(&m.id),
+                disk_bytes: self.model_disk_bytes(&m.id),
+                download_url_hint: m.download_url_hint.clone(),
+                notes: m.notes.clone(),
+            })
+            .collect()
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelStatusEntry {
+    pub id: String,
+    pub family: String,
+    pub task: String,
+    pub license_class: Option<String>,
+    pub commercial_default: bool,
+    pub hardware_min: Option<String>,
+    pub backend: Option<String>,
+    pub installed: bool,
+    pub disk_bytes: u64,
+    pub download_url_hint: Option<String>,
+    pub notes: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelVerifyReport {
+    pub model_id: String,
+    pub installed: bool,
+    pub digest_ok: bool,
+    pub expected_digest: Option<String>,
+    pub actual_digest: Option<String>,
+    pub marker_present: bool,
+    pub weight_path: Option<String>,
+}
+
+fn dir_size_bytes(path: &Path) -> u64 {
+    fn walk(p: &Path) -> u64 {
+        let mut total = 0u64;
+        let Ok(entries) = fs::read_dir(p) else {
+            return 0;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                total = total.saturating_add(walk(&path));
+            } else if let Ok(meta) = entry.metadata() {
+                total = total.saturating_add(meta.len());
+            }
+        }
+        total
+    }
+    if path.is_dir() {
+        walk(path)
+    } else if path.is_file() {
+        fs::metadata(path).map(|m| m.len()).unwrap_or(0)
+    } else {
+        0
     }
 }
 
@@ -347,7 +496,10 @@ impl WhisperBackend for WhisperStub {
             return Err(RouterError::Scheduler("empty pcm".into()));
         }
         // TODO(weights): call whisper.cpp with large-v3-turbo / large-v3 GGUF.
-        Ok("[whisper-stub] transcript".into())
+        Ok(
+            "[whisper-stub] OfflineMock ASR — install verified weights for real transcription"
+                .into(),
+        )
     }
 }
 
@@ -483,6 +635,100 @@ mod tests {
             mgr.require_or_mock("mock-mt").unwrap(),
             InferenceMode::Weights
         ));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn loose_files_not_installed_without_marker_or_dev() {
+        let dir = std::env::temp_dir().join(format!("llm-loose-{}", tests_uuid()));
+        let _ = fs::remove_dir_all(&dir);
+        let digest = sha256_hex(b"weights-only");
+        fs::create_dir_all(dir.join("models").join("weights").join("mock-mt")).unwrap();
+        fs::write(
+            dir.join("models")
+                .join("weights")
+                .join("mock-mt")
+                .join("weights.bin"),
+            b"weights-only",
+        )
+        .unwrap();
+        let catalog = ModelCatalog {
+            catalog_version: Some("1".into()),
+            models: vec![CatalogModel {
+                id: "mock-mt".into(),
+                family: "mock".into(),
+                task: "mt".into(),
+                license_class: Some("commercial-default".into()),
+                commercial_default: Some(true),
+                hardware_min: Some("lite".into()),
+                backend: None,
+                languages: None,
+                sha256_placeholder: Some(format!("sha256:{digest}")),
+                download_url_hint: None,
+                notes: None,
+            }],
+        };
+        fs::write(
+            dir.join("models").join("catalog.json"),
+            serde_json::to_string(&serde_json::json!({
+                "catalogVersion": "1",
+                "models": [{
+                    "id": "mock-mt",
+                    "family": "mock",
+                    "task": "mt",
+                    "licenseClass": "commercial-default",
+                    "commercialDefault": true,
+                    "hardwareMin": "lite",
+                    "sha256Placeholder": format!("sha256:{digest}")
+                }]
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        let mgr = ModelManager::new(ModelPaths::from_root(&dir), catalog);
+        assert!(
+            !mgr.is_installed("mock-mt"),
+            "loose files alone must not count as installed"
+        );
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn dev_catalog_allows_weight_presence_without_marker() {
+        let dir = std::env::temp_dir().join(format!("llm-dev-{}", tests_uuid()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(dir.join("models").join("weights").join("mock-mt")).unwrap();
+        fs::write(
+            dir.join("models")
+                .join("weights")
+                .join("mock-mt")
+                .join("weights.bin"),
+            b"x",
+        )
+        .unwrap();
+        let catalog = ModelCatalog {
+            catalog_version: Some("1".into()),
+            models: vec![CatalogModel {
+                id: "mock-mt".into(),
+                family: "mock".into(),
+                task: "mt".into(),
+                license_class: Some("commercial-default".into()),
+                commercial_default: Some(true),
+                hardware_min: Some("lite".into()),
+                backend: None,
+                languages: None,
+                sha256_placeholder: Some("sha256:PENDING_mock".into()),
+                download_url_hint: None,
+                notes: None,
+            }],
+        };
+        fs::write(
+            dir.join("models").join("catalog.json"),
+            r#"{"models":[{"id":"mock-mt","family":"mock","task":"mt","sha256Placeholder":"sha256:PENDING_mock"}]}"#,
+        )
+        .unwrap();
+        let mgr = ModelManager::new(ModelPaths::from_root(&dir), catalog);
+        assert!(mgr.is_installed("mock-mt"));
         let _ = fs::remove_dir_all(&dir);
     }
 }

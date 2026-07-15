@@ -4,13 +4,15 @@
   "version": "0.0.0",
   "description": "Local-first YouTube language suite (extension + companion)",
   "scripts": {
-    "build": "pnpm -r build",
-    "test": "pnpm -r test",
-    "typecheck": "pnpm -r typecheck",
-    "lint": "pnpm -r lint",
+    "build": "pnpm -r --filter \"!@language-llm/extension-e2e\" build",
+    "test": "pnpm -r --filter \"!@language-llm/extension-e2e\" test",
+    "typecheck": "pnpm -r --filter \"!@language-llm/extension-e2e\" typecheck",
+    "lint": "pnpm -r --filter \"!@language-llm/extension-e2e\" lint",
     "verify": "node scripts/verify.mjs",
-    "test:js": "pnpm -r --filter \"!@language-llm/extension\" test",
-    "test:all": "pnpm -r test"
+    "verify:quick": "node scripts/verify.mjs --skip-install --quick",
+    "test:js": "pnpm -r --filter \"!@language-llm/extension\" --filter \"!@language-llm/extension-e2e\" test",
+    "test:all": "pnpm -r --filter \"!@language-llm/extension-e2e\" test",
+    "test:e2e": "pnpm --filter @language-llm/extension-e2e test"
   },
   "engines": {
     "node": ">=20"

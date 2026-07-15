@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Feature ideas must respect legal constraints: no YouTube downloaders; store-safe lyrics only.
-        See CONTRIBUTING.md and STATUS.md.
+        See CONTRIBUTING.md, STATUS.md, and docs/architecture. Prefer `@language-llm/ui` density profiles for UI work.
   - type: textarea
     id: problem
     attributes:
@@ -30,6 +30,8 @@ body:
         - label: Does not add YouTube/stream downloading or proprietary lyric scrapers
           required: true
         - label: Stays local-first (no silent cloud inference)
+          required: true
+        - label: I checked STATUS.md so this is not asking for a Deferred / weights-only feature as if it were already GA
           required: true
   - type: textarea
     id: alternatives

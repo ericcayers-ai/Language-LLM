@@ -36,6 +36,33 @@ export function buildNodePath(indices: Array<{ tag: string; index: number }>): s
   return indices.map((p) => `${p.index}.${p.tag}`).join("/");
 }
 
+/**
+ * Absolute DOM path from a live node up to (but not including) documentElement.
+ * Matches apply/restore walkers; always includes BODY when the node is in body.
+ */
+export function absoluteNodePath(node: Node): string {
+  const parts: Array<{ tag: string; index: number }> = [{ tag: "ROOT", index: 0 }];
+  const chain: Node[] = [];
+  const stop = node.ownerDocument?.documentElement ?? null;
+  let cur: Node | null = node;
+  while (cur && cur !== stop) {
+    chain.push(cur);
+    cur = cur.parentNode;
+  }
+  chain.reverse();
+  for (const c of chain) {
+    const parent = c.parentNode;
+    if (!parent) continue;
+    const index = Array.prototype.indexOf.call(parent.childNodes, c);
+    const tag =
+      c.nodeType === Node.ELEMENT_NODE
+        ? (c as Element).tagName
+        : "#text";
+    parts.push({ tag, index });
+  }
+  return buildNodePath(parts);
+}
+
 export function shouldSkipElement(
   tagName: string,
   opts: DomSegmentOptions = {},
@@ -119,7 +146,10 @@ export function collectTextSegments(
     }
     if (node.nodeType === Node.TEXT_NODE) {
       const text = node.textContent ?? "";
-      const path = buildNodePath(pathParts);
+      const path =
+        node.ownerDocument != null
+          ? absoluteNodePath(node)
+          : buildNodePath(pathParts);
       const seg = makeSegment(path, text);
       if (seg && seg.originalText.length >= minLength) {
         segments.push(seg);
@@ -155,6 +185,20 @@ export class RestoreTable {
     const m = new Map<string, string>();
     for (const [id, e] of this.byId) m.set(id, e.originalText);
     return m;
+  }
+
+  /** Fast path-keyed lookup for live DOM apply/restore. */
+  originalsByPath(): Map<string, string> {
+    const m = new Map<string, string>();
+    for (const e of this.byId.values()) m.set(e.path, e.originalText);
+    return m;
+  }
+
+  getByPath(path: string): RestoreEntry | undefined {
+    for (const e of this.byId.values()) {
+      if (e.path === path) return e;
+    }
+    return undefined;
   }
 
   clear(): void {

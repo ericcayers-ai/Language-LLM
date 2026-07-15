@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  createCompanionStudyStore,
   createMemoryStudyStore,
   StudySession,
 } from "../session";
@@ -39,5 +40,64 @@ describe("study session", () => {
     await b.hydrate();
     expect(b.listCards()).toHaveLength(1);
     expect(b.listCards()[0]?.sourceText).toBe("ねこ");
+  });
+
+  it("companion store syncs to authority with offline mirror", async () => {
+    const offline = createMemoryStudyStore();
+    let putPayload: unknown;
+    const store = createCompanionStudyStore(offline, async (message) => {
+      if (message.op === "list") {
+        return {
+          ok: true,
+          result: {
+            type: "study.sync.result",
+            result: {
+              ok: true,
+              items: [
+                {
+                  id: "session",
+                  kind: "study-session",
+                  payload: {
+                    cards: [
+                      {
+                        id: "remote",
+                        sourceText: "remote",
+                        tags: [],
+                        provenance: "user-edit",
+                        fsrs: {
+                          due: 1,
+                          stability: 1,
+                          difficulty: 5,
+                          elapsedDays: 0,
+                          scheduledDays: 1,
+                          reps: 0,
+                          lapses: 0,
+                          state: "new",
+                        },
+                        createdAtMs: 1,
+                        updatedAtMs: 1,
+                      },
+                    ],
+                    knownWords: ["hi"],
+                  },
+                },
+              ],
+            },
+          },
+        };
+      }
+      if (message.op === "put") {
+        putPayload = message.payload;
+        return { ok: true, result: { type: "study.sync.result", result: { ok: true } } };
+      }
+      return { ok: false, error: "unknown" };
+    });
+    const snap = await store.load();
+    expect(snap.cards[0]?.sourceText).toBe("remote");
+    expect(snap.knownWords).toContain("hi");
+    await store.save({ cards: snap.cards, knownWords: ["hi", "yo"] });
+    expect(putPayload).toMatchObject({ knownWords: ["hi", "yo"] });
+    const mirrored = await offline.load();
+    expect(mirrored.knownWords).toContain("yo");
   });
 });

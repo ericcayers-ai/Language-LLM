@@ -283,8 +283,7 @@ impl crate::WhisperBackend for WhisperCppBackend {
         // Real path expects a WAV on disk; callers write PCM → WAV then call `run_whisper`.
         // Keep trait usable: reject until file-based API is used.
         Err(RouterError::Scheduler(
-            "WhisperCppBackend::transcribe requires WAV via run_whisper; use file path API"
-                .into(),
+            "WhisperCppBackend::transcribe requires WAV via run_whisper; use file path API".into(),
         ))
     }
 }
@@ -404,12 +403,10 @@ mod tests {
             bin_dir: bin_dir.clone(),
             weights_dir: mgr.paths.weights_dir.clone(),
         };
-        let backend = WhisperCppBackend::try_load(&mgr, "whisper-large-v3-turbo", &runtime).unwrap();
+        let backend =
+            WhisperCppBackend::try_load(&mgr, "whisper-large-v3-turbo", &runtime).unwrap();
         let text = run_whisper(&backend.config, &wav).unwrap();
-        assert!(
-            text.contains("whisper-fake"),
-            "unexpected stdout: {text:?}"
-        );
+        assert!(text.contains("whisper-fake"), "unexpected stdout: {text:?}");
 
         // Command builder must include -m and -f.
         let cmd = build_whisper_command(&backend.config, &wav);

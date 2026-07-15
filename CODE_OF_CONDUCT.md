@@ -59,9 +59,10 @@ representative at an online or offline event.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported by opening a GitHub issue with the `conduct` label (or a private
-maintainer contact if your fork provides one). All complaints will be reviewed
-and investigated promptly and fairly.
+reported by opening a GitHub issue with the `conduct` label, or by contacting
+repository maintainers privately (GitHub: `ericcayers-ai`). Do **not** use
+public issues for security vulnerabilities — see SECURITY.md. All conduct
+complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the
 reporter of any incident.
