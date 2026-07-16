@@ -16,13 +16,18 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: "Build unsigned artifacts only (skip sign/publish)"
+        description: "Build unsigned artifacts only (skip sign/CWS). Still attaches unsigned assets to the GitHub Release when tag is set."
         type: boolean
         default: true
       include_gui:
         description: "Also attempt Tauri gui bundle (needs platform WebView + icons)"
         type: boolean
         default: false
+      tag:
+        description: "Existing git tag to publish (e.g. v0.1.0). Leave empty to skip GitHub Release upload."
+        type: string
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -100,6 +105,43 @@ jobs:
             target/release/language-llm-desktop.exe
             apps/desktop/src-tauri/target/release/bundle/**
           if-no-files-found: warn
+
+  publish-unsigned-release:
+    name: attach unsigned assets to GitHub Release
+    needs: package-unsigned
+    if: ${{ inputs.tag != '' }}
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+      - name: Normalize asset names and upload
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          EXT_ZIP="$(find dist -type f -name '*.zip' | head -n 1 || true)"
+          LINUX_BIN="$(find dist/unsigned-ubuntu-latest -type f -name 'language-llm-desktop' | head -n 1 || true)"
+          MAC_BIN="$(find dist/unsigned-macos-latest -type f -name 'language-llm-desktop' | head -n 1 || true)"
+          WIN_BIN="$(find dist/unsigned-windows-latest -type f -name 'language-llm-desktop.exe' | head -n 1 || true)"
+          [[ -n "${EXT_ZIP}" ]] && cp "${EXT_ZIP}" "release-assets/language-llm-extension-0.1.0-chrome-mv3-unsigned.zip"
+          [[ -n "${LINUX_BIN}" ]] && cp "${LINUX_BIN}" release-assets/language-llm-desktop-linux-x64-unsigned
+          [[ -n "${MAC_BIN}" ]] && cp "${MAC_BIN}" release-assets/language-llm-desktop-macos-unsigned
+          [[ -n "${WIN_BIN}" ]] && cp "${WIN_BIN}" release-assets/language-llm-desktop-windows-x64-unsigned.exe
+          ls -la release-assets
+          test -n "$(ls -A release-assets)" || { echo "No release assets found"; exit 1; }
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" release-assets/* --clobber
+          else
+            gh release create "$TAG" release-assets/* \
+              --title "Language-LLM ${TAG}" \
+              --notes-file .github/RELEASE_TEMPLATE.md \
+              --verify-tag
+          fi
 
   sign-and-publish:
     name: sign / notarize / CWS prep

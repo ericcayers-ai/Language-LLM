@@ -323,7 +323,7 @@ export default defineContentScript({
       if (!stored?.cues?.length) return false;
       timeline = stored;
       emptyKind = undefined;
-      captionSourceLabel = stored.captionSource ?? "asr";
+      captionSourceLabel = stored.captionSource ?? "asr-live";
       const texts = stored.cues.map((c) => c.text);
       const tr = hydrated.translation as
         | { cues?: Array<{ text?: string; provisional?: boolean }> }
@@ -500,8 +500,11 @@ export default defineContentScript({
         if (event?.type === "timeline.source" && event.timeline) {
           mergeAsrTimeline(event.timeline);
           emptyKind = undefined;
-          captionSourceLabel = "asr";
           const stub = Boolean(event.timeline.developmentFallback);
+          // Never label OfflineMock as live ASR in the overlay provenance chip.
+          captionSourceLabel = stub
+            ? undefined
+            : (event.timeline.captionSource ?? "asr-live");
           overlay.update({
             jobState: "asr-running",
             statusMessage: stub

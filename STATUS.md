@@ -1,8 +1,8 @@
 # Implementation status
 
-Living checklist for the monorepo. Updated **2026-07-16** (Phase 4 completion audit).
+Living checklist for the monorepo. Updated **2026-07-17** (v0.1.0 re-release gap audit).
 
-**Default git branch:** **`main`** (verify-push renames away from `master`).
+**Default git branch:** **`main`**.
 
 ## Status taxonomy
 
@@ -32,17 +32,19 @@ These remain after software-side overhaul work. Do **not** close them by weakeni
 
 ## Phase snapshots (recent)
 
-### Phase 4 — Completion audit (verify-push)
+### Phase 4 — Completion audit + v0.1.0 re-release gap pass
 
 | Item | Label |
 | --- | --- |
-| Fresh gap audit vs plan / STATUS / threat model / CWS | **Implemented** (this pass) |
-| OfflineMock ASR labeled (`developmentFallback`, no fake `asr-live` provenance) | **Implemented** |
+| Fresh gap audit vs plan / STATUS / threat model / CWS | **Implemented** (2026-07-17 re-release pass) |
+| OfflineMock ASR labeled (`developmentFallback`; stub timelines omit `captionSource: asr-live`) | **Implemented** |
 | Page-translate uses llama when verified weights installed; OfflineMock only when absent | **Implemented** |
 | Unsupported `job.submit` kinds fail closed (no `{ ok: true, mock: true }`) | **Implemented** |
 | Provisional MT / VLM status distinguishes OfflineMock vs [dev] companion-down vs stub VLM | **Implemented** |
 | Playwright / e2e report dirs gitignored | **Implemented** |
-| Default branch `main`; `master` removed | Target of this push |
+| Default branch `main`; CI triggers only on `main` | **Implemented** |
+| Package / extension versions aligned to `0.1.0` for release zip naming | **Implemented** |
+| `release.yml` attaches normalized unsigned assets to a GitHub Release when `tag` is provided | **Implemented** (signing/CWS still **Deferred**) |
 
 ### Phase 3A — Quality gates
 

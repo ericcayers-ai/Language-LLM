@@ -12,9 +12,9 @@ Until then, entries track monorepo overhaul milestones. **Do not** read pre-1.0 
 
 -
 
-## [0.1.0] — 2026-07-16
+## [0.1.0] — 2026-07-17
 
-First tagged milestone after the product overhaul. Software paths ship with honest OfflineMock / weights-required labeling; not a Chrome Web Store or signed-desktop GA.
+First tagged milestone after the product overhaul (re-released 2026-07-17 after gap audit). Software paths ship with honest OfflineMock / weights-required labeling; not a Chrome Web Store or signed-desktop GA.
 
 ### Added
 
@@ -22,7 +22,7 @@ First tagged milestone after the product overhaul. Software paths ship with hone
 - Community & ops docs: [SECURITY.md](./SECURITY.md), privacy, enterprise Chrome, troubleshooting, attributions, Dependabot, CODEOWNERS, release notes template
 - Source timeline `developmentFallback` flag for labeled OfflineMock ASR
 - Cross-platform CI quality matrix (ubuntu / windows / macos) plus unsigned headless companion artifacts and optional Tauri GUI check
-- Protected `release.yml` workflow stub (unsigned dry-run by default; signing/CWS secrets external)
+- Protected `release.yml` workflow (unsigned dry-run by default; optional `tag` input attaches normalized unsigned assets to the GitHub Release; signing/CWS secrets external)
 
 ### Changed
 
@@ -33,12 +33,16 @@ First tagged milestone after the product overhaul. Software paths ship with hone
 - OfflineMock ASR uses valid `asr` provenance + honest overlay status (no fake “live ASR” claim)
 - Unsupported `job.submit` kinds fail closed instead of returning mock success
 - Provisional MT / page-translate / stub VLM status copy distinguishes OfflineMock vs [dev] companion-down
+- Workspace / extension package versions aligned to `0.1.0` so release zip names match the tag
 
 ### Fixed
 
 - CI `pnpm install --frozen-lockfile` failure: lockfile still listed `@language-llm/ui` under `benchmarks` after that dependency was removed from `benchmarks/package.json`
 - Unix CI compile of `inference-router` fake-CLI tests: missing `std::io::Write` for shell stub writer (Windows path was fine; switched unix stub to `fs::write`)
 - Clippy `-D warnings` on Linux/macOS: unused `Command` import (Linux) and needless `return` in native-host repair branches
+- OfflineMock ASR timelines no longer set `captionSource: "asr-live"` (stub path sets `developmentFallback` only; live whisper keeps `asr-live`)
+- Extension overlay no longer labels OfflineMock ASR cues with an invalid/`asr` provenance chip; stub path clears the live-ASR label
+- `release.yml` previously uploaded Actions artifacts only and never attached GitHub Release assets — publish step now normalizes and uploads when `tag` is provided
 
 ### Notes (product, from overhaul — software-side)
 

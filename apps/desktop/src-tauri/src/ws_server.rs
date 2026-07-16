@@ -987,29 +987,34 @@ async fn handle_audio_chunk(
         return;
     }
 
+    // OfflineMock must not claim captionSource "asr-live"; real whisper paths may.
+    let mut timeline = json!({
+        "videoId": video_id,
+        "cues": [{
+            "id": format!("asr-{segment}"),
+            "startMs": 0,
+            "endMs": duration_ms.max(500),
+            "text": transcript,
+            "provenance": "asr"
+        }],
+        "sourceHash": if used_stub {
+            format!("asr-stub-{segment}")
+        } else {
+            format!("asr-live-{segment}")
+        },
+        "immutable": true
+    });
+    if used_stub {
+        timeline["developmentFallback"] = json!(true);
+    } else {
+        timeline["captionSource"] = json!("asr-live");
+    }
     let _ = sink
         .send(Message::Text(
             json!({
                 "type": "timeline.source",
                 "sessionToken": session_token,
-                "timeline": {
-                    "videoId": video_id,
-                    "cues": [{
-                        "id": format!("asr-{segment}"),
-                        "startMs": 0,
-                        "endMs": duration_ms.max(500),
-                        "text": transcript,
-                        "provenance": "asr"
-                    }],
-                    "sourceHash": if used_stub {
-                        format!("asr-stub-{segment}")
-                    } else {
-                        format!("asr-live-{segment}")
-                    },
-                    "immutable": true,
-                    "captionSource": "asr-live",
-                    "developmentFallback": used_stub
-                }
+                "timeline": timeline
             })
             .to_string()
             .into(),
