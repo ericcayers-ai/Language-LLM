@@ -22,7 +22,7 @@ uuid = { version = "1", features = ["v4", "serde"] }
 language-llm-protocol = { path = "packages/protocol/rust" }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "sync", "time", "fs"] }
 axum = { version = "0.8", features = ["ws"] }
-tower-http = { version = "0.6", features = ["cors"] }
+tower-http = { version = "0.7", features = ["cors"] }
 sha2 = "0.10"
 hex = "0.4"
 base64 = "0.22"
