@@ -1674,7 +1674,7 @@ dependencies = [
 
 [[package]]
 name = "inference-router"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "hex",
  "language-llm-protocol",
@@ -1858,7 +1858,7 @@ dependencies = [
 
 [[package]]
 name = "language-llm-desktop"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "axum",
  "base64 0.22.1",
@@ -1988,7 +1988,7 @@ checksum = "92daf443525c4cce67b150400bc2316076100ce0b3686209eb8cf3c31612e6f0"
 
 [[package]]
 name = "local-store"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "language-llm-protocol",
  "rusqlite",
@@ -2047,7 +2047,7 @@ checksum = "47e1ffaa40ddd1f3ed91f717a33c8c0ee23fff369e3aa8772b9605cc1d22f4c3"
 
 [[package]]
 name = "media-pipeline"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "language-llm-protocol",
  "serde",
@@ -3693,7 +3693,7 @@ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
 name = "subtitle-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "language-llm-protocol",
  "serde",

@@ -8,6 +8,7 @@ import {
   PageTranslateToolbar,
   ReviewCard,
   StatusRegion,
+  TabBar,
   TranscriptList,
 } from "./index.js";
 
@@ -148,6 +149,28 @@ describe("EmptyState", () => {
       screen.getByRole("button", { name: "Transcribe this tab" }),
     );
     expect(onTranscribe).toHaveBeenCalled();
+    expect(await axe(container)).toHaveNoViolations();
+  });
+});
+
+describe("TabBar", () => {
+  it("switches tabs with click and arrow keys", async () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <TabBar
+        label="Sections"
+        value="a"
+        onChange={onChange}
+        items={[
+          { id: "a", label: "One" },
+          { id: "b", label: "Two" },
+        ]}
+      />,
+    );
+    fireEvent.click(screen.getByRole("tab", { name: "Two" }));
+    expect(onChange).toHaveBeenCalledWith("b");
+    fireEvent.keyDown(screen.getByRole("tablist"), { key: "ArrowRight" });
+    expect(onChange).toHaveBeenCalledWith("b");
     expect(await axe(container)).toHaveNoViolations();
   });
 });

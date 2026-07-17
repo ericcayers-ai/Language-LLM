@@ -187,6 +187,26 @@ fn output_to_text(out: Output) -> Result<String, RouterError> {
     Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
 }
 
+/// Run a prepared `Command`, retrying briefly on Linux ETXTBSY ("Text file busy")
+/// which can occur when a just-written executable is still being settled.
+fn output_with_etxtbsy_retry(mut build: impl FnMut() -> Command) -> Result<Output, std::io::Error> {
+    const ATTEMPTS: u32 = 8;
+    let mut last = None;
+    for attempt in 0..ATTEMPTS {
+        match build().output() {
+            Ok(out) => return Ok(out),
+            Err(e) if e.raw_os_error() == Some(26) => {
+                last = Some(e);
+                std::thread::sleep(Duration::from_millis(
+                    5u64.saturating_mul(u64::from(attempt + 1)),
+                ));
+            }
+            Err(e) => return Err(e),
+        }
+    }
+    Err(last.unwrap_or_else(|| std::io::Error::other("spawn failed")))
+}
+
 /// Spawn whisper.cpp and collect stdout transcript text.
 pub fn run_whisper(cfg: &WhisperCppConfig, wav_path: &Path) -> Result<String, RouterError> {
     if !cfg.cli_path.is_file() {
@@ -201,9 +221,7 @@ pub fn run_whisper(cfg: &WhisperCppConfig, wav_path: &Path) -> Result<String, Ro
             cfg.model_path.display()
         )));
     }
-    let mut cmd = build_whisper_command(cfg, wav_path);
-    let out = cmd
-        .output()
+    let out = output_with_etxtbsy_retry(|| build_whisper_command(cfg, wav_path))
         .map_err(|e| RouterError::Io(format!("spawn whisper: {e}")))?;
     output_to_text(out)
 }
@@ -222,9 +240,7 @@ pub fn run_llama(cfg: &LlamaCppConfig, prompt: &str) -> Result<String, RouterErr
             cfg.model_path.display()
         )));
     }
-    let mut cmd = build_llama_command(cfg, prompt);
-    let out = cmd
-        .output()
+    let out = output_with_etxtbsy_retry(|| build_llama_command(cfg, prompt))
         .map_err(|e| RouterError::Io(format!("spawn llama: {e}")))?;
     output_to_text(out)
 }
@@ -344,18 +360,29 @@ mod tests {
             let path = dir.join(format!("{stem}.cmd"));
             // `%*` so -m/-f/-p args are accepted; echo fixed success line to stdout.
             let body = format!("@echo off\r\necho {echo}\r\nexit /b 0\r\n");
-            fs::write(&path, body).unwrap();
+            let tmp = dir.join(format!("{stem}.cmd.tmp"));
+            fs::write(&tmp, body).unwrap();
+            fs::rename(&tmp, &path).unwrap();
             path
         }
         #[cfg(not(windows))]
         {
-            let path = dir.join(stem);
-            let body = format!("#!/bin/sh\necho '{echo}'\nexit 0\n");
-            fs::write(&path, body).unwrap();
+            use std::io::Write;
             use std::os::unix::fs::PermissionsExt;
-            let mut perms = fs::metadata(&path).unwrap().permissions();
+            let path = dir.join(stem);
+            let tmp = dir.join(format!("{stem}.tmp"));
+            let body = format!("#!/bin/sh\necho '{echo}'\nexit 0\n");
+            // Write + sync + rename so exec avoids intermittent ETXTBSY on the
+            // still-open write handle / unsettled inode under parallel tests.
+            {
+                let mut f = fs::File::create(&tmp).unwrap();
+                f.write_all(body.as_bytes()).unwrap();
+                f.sync_all().unwrap();
+            }
+            let mut perms = fs::metadata(&tmp).unwrap().permissions();
             perms.set_mode(0o755);
-            fs::set_permissions(&path, perms).unwrap();
+            fs::set_permissions(&tmp, perms).unwrap();
+            fs::rename(&tmp, &path).unwrap();
             path
         }
     }

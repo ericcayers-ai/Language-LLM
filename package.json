@@ -1,7 +1,7 @@
 {
   "name": "language-llm",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Local-first YouTube language suite (extension + companion)",
   "scripts": {
     "build": "pnpm -r --filter \"!@language-llm/extension-e2e\" build",

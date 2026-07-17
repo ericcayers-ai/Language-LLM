@@ -20,6 +20,22 @@ const PAGE_ORIGINS = ["http://*/*", "https://*/*"] as const;
 
 type CompanionUi = "unknown" | "ready" | "degraded" | "down";
 
+function companionChip(state: CompanionUi): { className: string; label: string } {
+  switch (state) {
+    case "ready":
+      return { className: "llm-chip llm-chip--ok", label: "Companion ready" };
+    case "degraded":
+      return {
+        className: "llm-chip llm-chip--warn",
+        label: "Companion degraded",
+      };
+    case "down":
+      return { className: "llm-chip llm-chip--err", label: "Companion offline" };
+    default:
+      return { className: "llm-chip", label: "Checking…" };
+  }
+}
+
 function PopupInner() {
   const { profile, setProfile } = useDensity();
   const [companion, setCompanion] = useState<CompanionUi>("unknown");
@@ -28,12 +44,16 @@ function PopupInner() {
   const [tabTitle, setTabTitle] = useState("");
   const [retention, setRetentionState] = useState<RetentionPreset>("days7");
 
-  useEffect(() => {
+  const refreshCompanion = () => {
     void pingCompanion().then((ping) => {
       if (ping.ready) setCompanion("ready");
       else if (ping.degraded) setCompanion("degraded");
       else setCompanion("down");
     });
+  };
+
+  useEffect(() => {
+    refreshCompanion();
     chrome.permissions.contains({ origins: [...PAGE_ORIGINS] }, (granted) => {
       setPagePerm(Boolean(granted));
     });
@@ -62,37 +82,22 @@ function PopupInner() {
     });
   };
 
+  const chip = companionChip(companion);
+
   return (
-    <div
-      style={{
-        width: 340,
-        padding: 14,
-        display: "flex",
-        flexDirection: "column",
-        gap: 12,
-        boxSizing: "border-box",
-      }}
-    >
-      <header>
-        <h1 style={{ fontSize: 17, margin: 0 }}>Language-LLM</h1>
-        <p style={{ margin: "4px 0 0", fontSize: 12, opacity: 0.75 }}>
-          Launcher for the current tab
-        </p>
+    <div className="llm-surface popup-shell">
+      <header className="popup-header">
+        <div className="popup-header__top">
+          <h1 className="popup-title">Language-LLM</h1>
+          <span className={chip.className}>{chip.label}</span>
+        </div>
         {tabTitle ? (
-          <p
-            style={{
-              margin: "6px 0 0",
-              fontSize: 11,
-              opacity: 0.65,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-            title={tabTitle}
-          >
+          <p className="popup-tab" title={tabTitle}>
             {tabTitle}
           </p>
-        ) : null}
+        ) : (
+          <p className="popup-tab popup-tab--muted">Current tab</p>
+        )}
       </header>
 
       {companion === "down" ? (
@@ -102,31 +107,13 @@ function PopupInner() {
             {
               id: "retry",
               label: "Retry",
-              onClick: () => {
-                void pingCompanion().then((ping) => {
-                  if (ping.ready) setCompanion("ready");
-                  else if (ping.degraded) setCompanion("degraded");
-                  else setCompanion("down");
-                });
-              },
+              onClick: refreshCompanion,
             },
           ]}
         />
-      ) : companion === "degraded" ? (
-        <StatusRegion
-          message="Companion degraded (native only) — open side panel for recovery"
-          tone="warn"
-        />
-      ) : (
-        <StatusRegion
-          message={
-            companion === "ready" ? "Companion ready" : "Checking companion…"
-          }
-          tone={companion === "ready" ? "success" : "info"}
-        />
-      )}
+      ) : null}
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+      <section className="popup-actions" aria-label="Quick actions">
         <Button
           variant="primary"
           onClick={() => {
@@ -180,17 +167,19 @@ function PopupInner() {
         <Button variant="ghost" onClick={openSidePanel}>
           Open side panel
         </Button>
-      </div>
+      </section>
 
-      <section aria-label="Website translate permission">
-        <p style={{ fontSize: 12, margin: "0 0 6px", opacity: 0.8 }}>
-          Website hosts:{" "}
-          <strong>{pagePerm ? "granted" : "not granted"}</strong>
-        </p>
-        {pagePerm ? (
-          <Button
-            variant="ghost"
-            onClick={() => {
+      <section className="popup-perm" aria-label="Website permission">
+        <div className="popup-perm__row">
+          <span className="llm-meta">Website hosts</span>
+          <span className={`llm-chip ${pagePerm ? "llm-chip--ok" : ""}`}>
+            {pagePerm ? "Granted" : "Not granted"}
+          </span>
+        </div>
+        <Button
+          variant="ghost"
+          onClick={() => {
+            if (pagePerm) {
               chrome.permissions.remove(
                 { origins: [...PAGE_ORIGINS] },
                 (removed) => {
@@ -198,14 +187,7 @@ function PopupInner() {
                   setStatus(removed ? "Permission revoked" : "Still granted");
                 },
               );
-            }}
-          >
-            Revoke host permission
-          </Button>
-        ) : (
-          <Button
-            variant="ghost"
-            onClick={() => {
+            } else {
               chrome.permissions.request(
                 { origins: [...PAGE_ORIGINS] },
                 (granted) => {
@@ -215,68 +197,148 @@ function PopupInner() {
                   );
                 },
               );
-            }}
-          >
-            Grant host permission
-          </Button>
-        )}
+            }
+          }}
+        >
+          {pagePerm ? "Revoke permission" : "Grant permission"}
+        </Button>
       </section>
 
       {profile !== "focus" ? (
-        <section aria-label="Quick privacy">
-          <p style={{ fontSize: 12, margin: "0 0 6px", opacity: 0.8 }}>
-            Retention:{" "}
-            <select
-              value={retention}
-              aria-label="Retention preset"
-              onChange={(e) => {
-                const preset = e.target.value as RetentionPreset;
-                setRetentionState(preset);
-                void setRetention(preset).then((res) => {
+        <details className="popup-more" data-llm-chrome="nonessential">
+          <summary>Privacy shortcuts</summary>
+          <div className="popup-more__body">
+            <label className="llm-field">
+              <span>Retention</span>
+              <select
+                className="llm-select llm-focus-ring"
+                value={retention}
+                aria-label="Retention preset"
+                onChange={(e) => {
+                  const preset = e.target.value as RetentionPreset;
+                  setRetentionState(preset);
+                  void setRetention(preset).then((res) => {
+                    setStatus(
+                      res.ok
+                        ? `Retention → ${preset}`
+                        : res.error ?? "Retention failed",
+                    );
+                  });
+                }}
+              >
+                <option value="session">This session</option>
+                <option value="days7">7 days</option>
+                <option value="days30">30 days</option>
+                <option value="keep">Keep until wipe</option>
+              </select>
+            </label>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                if (
+                  !window.confirm(
+                    "Wipe all companion-stored data (transcripts, study, dictionaries)?",
+                  )
+                ) {
+                  return;
+                }
+                void wipePrivacy("all").then((res) => {
                   setStatus(
                     res.ok
-                      ? `Retention → ${preset}`
-                      : res.error ?? "Retention failed",
+                      ? "Privacy wipe completed"
+                      : res.error ?? "Wipe failed",
                   );
                 });
               }}
             >
-              <option value="session">session</option>
-              <option value="days7">7 days</option>
-              <option value="days30">30 days</option>
-              <option value="keep">keep</option>
-            </select>
-          </p>
-          <Button
-            variant="ghost"
-            onClick={() => {
-              if (
-                !window.confirm(
-                  "Wipe all companion-stored data (transcripts, study, dictionaries)?",
-                )
-              ) {
-                return;
-              }
-              void wipePrivacy("all").then((res) => {
-                setStatus(
-                  res.ok ? "Privacy wipe completed" : res.error ?? "Wipe failed",
-                );
-              });
-            }}
-          >
-            Privacy wipe…
-          </Button>
-        </section>
+              Privacy wipe…
+            </Button>
+          </div>
+        </details>
       ) : null}
 
       <ProfilePicker value={profile} onChange={setProfile} compact />
 
       {status ? <StatusRegion message={status} tone="info" /> : null}
 
-      <p style={{ fontSize: 11, margin: 0, opacity: 0.65 }}>
-        Reviews, dictionaries, and lyrics live in the side panel.
-        {profile === "focus" ? " Focus mode hides nonessential chrome." : ""}
+      <p className="popup-footer">
+        Transcript, learning, dictionaries, and lyrics live in the side panel.
       </p>
+
+      <style>{`
+        .popup-shell {
+          width: 340px;
+          padding: 14px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          box-sizing: border-box;
+        }
+        .popup-header__top {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+        }
+        .popup-title {
+          font-size: 1.05rem;
+          margin: 0;
+          font-weight: 750;
+          letter-spacing: -0.02em;
+        }
+        .popup-tab {
+          margin: 6px 0 0;
+          font-size: 0.75rem;
+          color: var(--llm-ink-secondary);
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .popup-tab--muted { color: var(--llm-muted-slate); }
+        .popup-actions {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .popup-actions .llm-btn { width: 100%; }
+        .popup-perm {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          padding-top: 4px;
+          border-top: 1px solid var(--llm-border);
+        }
+        .popup-perm__row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+        }
+        .popup-more {
+          border: 1px solid var(--llm-border);
+          border-radius: var(--llm-radius);
+          padding: 0.35rem 0.55rem;
+        }
+        .popup-more summary {
+          cursor: pointer;
+          font-size: 0.8125rem;
+          font-weight: 600;
+          color: var(--llm-ink-secondary);
+          padding: 0.25rem 0;
+        }
+        .popup-more__body {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          padding: 0.5rem 0 0.35rem;
+        }
+        .popup-footer {
+          font-size: 0.6875rem;
+          margin: 0;
+          color: var(--llm-muted-slate);
+          line-height: 1.4;
+        }
+      `}</style>
     </div>
   );
 }

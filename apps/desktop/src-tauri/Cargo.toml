@@ -1,6 +1,6 @@
 [package]
 name = "language-llm-desktop"
-version = "0.1.0"
+version = "0.1.1"
 edition.workspace = true
 license.workspace = true
 description = "Tauri companion shell (installer, native host, loopback API, desktop manager)"
