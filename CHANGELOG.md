@@ -8,13 +8,27 @@ Until then, entries track monorepo overhaul milestones. **Do not** read pre-1.0 
 
 ## [Unreleased]
 
-### Changed
-
-- Product UI QOL pass: grouped desktop nav, tabbed extension side panel, distilled popup launcher, theme-aware `@language-llm/ui` primitives (`TabBar`, shared CSS tokens)
-
 ### Fixed
 
 -
+
+## [0.1.1] — 2026-07-17
+
+UI QOL release: clearer navigation and lighter chrome across desktop manager + extension surfaces.
+
+### Added
+
+- Shared `TabBar` primitive and expanded theme-aware design tokens in `@language-llm/ui`
+
+### Changed
+
+- Desktop manager: grouped nav (Home / Library / Work / System / About), skip link, remembered page, `j`/`k` cycling
+- Extension popup distilled to a launcher; side panel uses tabbed workbench sections
+- Workspace / extension / Tauri package versions aligned to `0.1.1`
+
+### Fixed
+
+- Hardened whisper/llama fake-CLI integration tests against intermittent Linux `ETXTBSY` under parallel `cargo test --workspace`
 
 ## [0.1.0] — 2026-07-17
 
