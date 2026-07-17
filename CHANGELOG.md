@@ -8,6 +8,10 @@ Until then, entries track monorepo overhaul milestones. **Do not** read pre-1.0 
 
 ## [Unreleased]
 
+### Changed
+
+- Product UI QOL pass: grouped desktop nav, tabbed extension side panel, distilled popup launcher, theme-aware `@language-llm/ui` primitives (`TabBar`, shared CSS tokens)
+
 ### Fixed
 
 -
