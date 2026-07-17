@@ -1,5 +1,4 @@
 import { useEffect, useRef, type HTMLAttributes } from "react";
-import { colors, fonts } from "./tokens.js";
 
 export type StatusTone = "info" | "success" | "warn" | "error";
 
@@ -9,13 +8,6 @@ export interface StatusRegionProps extends HTMLAttributes<HTMLDivElement> {
   /** When true, also mirror into a polite aria-live for assistive tech. */
   announce?: boolean;
 }
-
-const toneColor: Record<StatusTone, string> = {
-  info: colors.mutedSlate,
-  success: colors.signalBlue,
-  warn: colors.amberEvidence,
-  error: colors.errorRed,
-};
 
 /**
  * Visible toast/status region. Visual updates are independent of 60fps caption ticks;
@@ -47,16 +39,10 @@ export function StatusRegion({
       <div
         role="status"
         data-llm-status={tone}
-        className={["llm-motion-safe", className].filter(Boolean).join(" ")}
-        style={{
-          fontFamily: fonts.ui,
-          fontSize: "0.8125rem",
-          color: toneColor[tone],
-          borderLeft: `3px solid ${toneColor[tone]}`,
-          padding: "0.4rem 0.65rem",
-          background: `color-mix(in srgb, ${toneColor[tone]} 8%, ${colors.paper})`,
-          ...style,
-        }}
+        className={["llm-status", "llm-motion-safe", className]
+          .filter(Boolean)
+          .join(" ")}
+        style={style}
         {...rest}
       >
         {message}

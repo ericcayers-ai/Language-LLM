@@ -92,9 +92,16 @@ describe("Desktop manager shell", () => {
     ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Models" }));
     expect(
-      screen.getByText(/Download verify\/remove model packs/i),
+      screen.getByText(/Download, verify, and remove model packs/i),
     ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Storage & privacy" }));
     expect(screen.getByText(/Retention presets/i)).toBeTruthy();
+  });
+
+  it("groups navigation landmarks", () => {
+    render(<App />);
+    expect(screen.getByText("Library")).toBeTruthy();
+    expect(screen.getByText("System")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /skip to content/i })).toBeTruthy();
   });
 });

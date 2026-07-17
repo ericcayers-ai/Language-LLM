@@ -5,7 +5,6 @@ import {
   profileLabel,
   type DensityProfile,
 } from "./density.js";
-import { colors, fonts } from "./tokens.js";
 
 export interface ProfilePickerProps
   extends Omit<HTMLAttributes<HTMLFieldSetElement>, "onChange"> {
@@ -27,30 +26,15 @@ export function ProfilePicker({
 }: ProfilePickerProps) {
   return (
     <fieldset
-      className={className}
-      style={{
-        border: `1px solid color-mix(in srgb, ${colors.mutedSlate} 35%, transparent)`,
-        borderRadius: 2,
-        padding: compact ? "0.45rem 0.55rem" : "0.65rem 0.75rem",
-        margin: 0,
-        fontFamily: fonts.ui,
-        ...style,
-      }}
+      className={["llm-profile", className].filter(Boolean).join(" ")}
+      style={style}
       {...rest}
     >
-      <legend
-        style={{
-          fontSize: "0.8125rem",
-          fontWeight: 600,
-          padding: "0 0.25rem",
-        }}
-      >
-        Density profile
-      </legend>
+      <legend>Density</legend>
       <div
         role="radiogroup"
         aria-label="Density profile"
-        style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}
+        className="llm-profile__options"
       >
         {OPTIONS.map((profile) => (
           <Button
@@ -69,15 +53,7 @@ export function ProfilePicker({
         ))}
       </div>
       {!compact ? (
-        <p
-          style={{
-            margin: "0.5rem 0 0",
-            fontSize: "0.75rem",
-            color: colors.mutedSlate,
-          }}
-        >
-          {profileDescription(value)}
-        </p>
+        <p className="llm-profile__hint">{profileDescription(value)}</p>
       ) : null}
     </fieldset>
   );

@@ -1,6 +1,5 @@
-import type { CSSProperties, HTMLAttributes, ReactNode } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 import { Button } from "./Button.js";
-import { colors, fonts } from "./tokens.js";
 
 export type EmptyStateKind =
   | "no-captions"
@@ -95,47 +94,21 @@ export function EmptyState({
   ...rest
 }: EmptyStateProps) {
   const copy = COPY[kind];
-  const rootStyle: CSSProperties = {
-    fontFamily: fonts.ui,
-    color: colors.ink,
-    background: colors.paper,
-    padding: "1rem",
-    border: `1px solid color-mix(in srgb, ${colors.mutedSlate} 35%, transparent)`,
-    borderRadius: 2,
-    ...style,
-  };
 
   return (
     <section
       role="status"
       aria-live="polite"
       data-llm-empty={kind}
-      className={className}
-      style={rootStyle}
+      className={["llm-empty", className].filter(Boolean).join(" ")}
+      style={style}
       {...rest}
     >
-      <h2
-        style={{
-          margin: "0 0 0.35rem",
-          fontSize: "1rem",
-          fontWeight: 700,
-        }}
-      >
-        {title ?? copy.title}
-      </h2>
-      <p
-        style={{
-          margin: "0 0 0.75rem",
-          fontSize: "0.875rem",
-          color: colors.mutedSlate,
-          lineHeight: 1.45,
-        }}
-      >
-        {description ?? copy.description}
-      </p>
+      <h2 className="llm-empty__title">{title ?? copy.title}</h2>
+      <p className="llm-empty__body">{description ?? copy.description}</p>
       {children}
       {actions.length > 0 ? (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+        <div className="llm-empty__actions">
           {actions.map((action) => (
             <Button
               key={action.id}

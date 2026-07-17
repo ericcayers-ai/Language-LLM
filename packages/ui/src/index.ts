@@ -58,6 +58,9 @@ export type {
 export { ProfilePicker } from "./ProfilePicker.js";
 export type { ProfilePickerProps } from "./ProfilePicker.js";
 
+export { TabBar } from "./TabBar.js";
+export type { TabBarProps, TabItem } from "./TabBar.js";
+
 export { ReviewCard } from "./ReviewCard.js";
 export type { ReviewCardProps } from "./ReviewCard.js";
 

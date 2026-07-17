@@ -27,24 +27,39 @@ export function OverviewView() {
     return () => window.clearInterval(id);
   }, []);
 
+  const running = health?.serviceRunning === true;
+
   return (
     <div>
-      <StatusRegion message={status} tone={tone} />
-      <section className="panel">
-        <h2>Companion health</h2>
+      {status ? (
+        <div style={{ marginBottom: "0.75rem" }}>
+          <StatusRegion message={status} tone={tone} />
+        </div>
+      ) : null}
+
+      <section className="panel" aria-labelledby="health-heading">
+        <div className="row" style={{ justifyContent: "space-between" }}>
+          <h2 id="health-heading">Companion</h2>
+          {health ? (
+            <span
+              className={`llm-chip ${running ? "llm-chip--ok" : "llm-chip--err"}`}
+            >
+              {running ? "Running" : "Stopped"}
+              {running ? ` · :${health.port}` : ""}
+            </span>
+          ) : (
+            <span className="llm-chip">Checking…</span>
+          )}
+        </div>
+
         {health ? (
           <dl className="stack meta">
-            <div>
-              Service:{" "}
-              <strong>{health.serviceRunning ? "running" : "stopped"}</strong>
-              {health.serviceRunning ? ` · port ${health.port}` : null}
-            </div>
             <div>Protocol {health.protocolVersion}</div>
             <div>
               Extension pin:{" "}
               {health.extensionIdPinned
                 ? health.allowedExtensionId
-                : "not pinned (release builds require LANGUAGE_LLM_EXTENSION_ID or data_dir/extension_id)"}
+                : "not pinned — set LANGUAGE_LLM_EXTENSION_ID or use Repair below"}
             </div>
             <div>
               SQLite {health.sqliteReady ? "ready" : "unavailable"} · catalog{" "}
@@ -54,58 +69,63 @@ export function OverviewView() {
             <div className="mono">{health.dataDir}</div>
           </dl>
         ) : (
-          <p className="meta">Loading…</p>
+          <p className="meta">Loading health…</p>
         )}
-        <div className="row" style={{ marginTop: "0.75rem" }}>
-          <Button
-            onClick={async () => {
-              try {
-                setHealth(await api.startService());
-                setTone("success");
-                setStatus("Service started");
-              } catch (e) {
-                setTone("error");
-                setStatus(String(e));
-              }
-            }}
-          >
-            Start service
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={async () => {
-              try {
-                setHealth(await api.stopService());
-                setTone("warn");
-                setStatus("Service stopped");
-              } catch (e) {
-                setTone("error");
-                setStatus(String(e));
-              }
-            }}
-          >
-            Stop service
-          </Button>
+
+        <div className="row" style={{ marginTop: "1rem" }}>
+          {running ? (
+            <Button
+              variant="ghost"
+              onClick={async () => {
+                try {
+                  setHealth(await api.stopService());
+                  setTone("warn");
+                  setStatus("Service stopped");
+                } catch (e) {
+                  setTone("error");
+                  setStatus(String(e));
+                }
+              }}
+            >
+              Stop service
+            </Button>
+          ) : (
+            <Button
+              onClick={async () => {
+                try {
+                  setHealth(await api.startService());
+                  setTone("success");
+                  setStatus("Service started");
+                } catch (e) {
+                  setTone("error");
+                  setStatus(String(e));
+                }
+              }}
+            >
+              Start service
+            </Button>
+          )}
           <Button variant="ghost" onClick={() => void refresh()}>
             Refresh
           </Button>
         </div>
       </section>
 
-      <section className="panel">
-        <h2>Native-host registration</h2>
-        <p className="meta">
-          One-action repair writes the Chrome native messaging manifest, wrapper,
-          and pins the extension ID for loopback WS auth.
+      <section className="panel" aria-labelledby="native-heading">
+        <h2 id="native-heading">Connect Chrome extension</h2>
+        <p className="meta" style={{ marginTop: 0 }}>
+          One action writes the native messaging manifest, wrapper, and pins the
+          extension ID for loopback WebSocket auth.
         </p>
-        <div className="row">
+        <div className="row" style={{ marginTop: "0.75rem" }}>
           <label className="field">
-            <span className="meta">Extension ID</span>
+            <span>Extension ID</span>
             <input
               value={extensionId}
               onChange={(e) => setExtensionId(e.target.value)}
               placeholder="abcdefghijklmnopqrstuvwxyz"
               spellCheck={false}
+              className="llm-focus-ring"
             />
           </label>
           <Button
@@ -142,8 +162,8 @@ export function OverviewView() {
         </div>
       </section>
 
-      <section className="panel expert-only">
-        <h2>Disk (quick)</h2>
+      <section className="panel expert-only" aria-labelledby="disk-heading">
+        <h2 id="disk-heading">Disk (quick)</h2>
         <DiskQuick />
       </section>
     </div>
