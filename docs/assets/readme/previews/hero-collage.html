@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Language-LLM README hero</title>
+<style>
+  :root {
+    --ink: #111318;
+    --paper: #f7f8fa;
+    --blue: #2f6fed;
+    --muted: #667085;
+    --font: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #fff; }
+  .hero {
+    width: 1400px;
+    height: 720px;
+    margin: 0 auto;
+    padding: 48px 56px;
+    background:
+      radial-gradient(900px 480px at 12% -10%, color-mix(in srgb, var(--blue) 14%, transparent), transparent 55%),
+      radial-gradient(700px 420px at 100% 0%, color-mix(in srgb, #c47b17 8%, transparent), transparent 50%),
+      var(--paper);
+    font-family: var(--font);
+    color: var(--ink);
+    display: grid;
+    grid-template-columns: 1fr 1.35fr;
+    gap: 36px;
+    align-items: center;
+  }
+  .copy h1 {
+    margin: 0;
+    font-size: 64px;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+    font-weight: 750;
+  }
+  .copy p {
+    margin: 18px 0 0;
+    font-size: 22px;
+    line-height: 1.45;
+    color: var(--muted);
+    max-width: 22ch;
+  }
+  .pill {
+    display: inline-flex;
+    margin-top: 22px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--blue) 35%, transparent);
+    background: color-mix(in srgb, var(--blue) 10%, transparent);
+    color: var(--blue);
+    font-size: 14px;
+    font-weight: 650;
+  }
+  .stage {
+    position: relative;
+    height: 600px;
+  }
+  .card {
+    position: absolute;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, #667085 28%, transparent);
+    background: #fff;
+    box-shadow: 0 18px 40px color-mix(in srgb, #111318 12%, transparent);
+  }
+  .card img { display: block; width: 100%; height: auto; }
+  .desktop { width: 620px; right: 0; top: 36px; }
+  .side { width: 230px; left: 12px; top: 70px; z-index: 2; }
+  .popup { width: 250px; left: 70px; bottom: 18px; z-index: 3; }
+</style>
+</head>
+<body>
+  <div class="hero" id="shot">
+    <div class="copy">
+      <h1>Language-LLM</h1>
+      <p>Local captions, translation, and learning — on your machine.</p>
+      <span class="pill">Chrome extension + desktop companion</span>
+    </div>
+    <div class="stage">
+      <div class="card side"><img src="../extension-sidepanel.jpg" alt="" /></div>
+      <div class="card desktop"><img src="../desktop-overview.jpg" alt="" /></div>
+      <div class="card popup"><img src="../extension-popup.jpg" alt="" /></div>
+    </div>
+  </div>
+</body>
+</html>

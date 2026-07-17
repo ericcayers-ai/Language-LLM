@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Language-LLM Desktop Preview</title>
+<style>
+  :root {
+    --ink: #111318;
+    --ink-secondary: #3d4450;
+    --paper: #f7f8fa;
+    --surface: #ffffff;
+    --surface-raised: #eef0f4;
+    --border: color-mix(in srgb, #667085 32%, transparent);
+    --blue: #2f6fed;
+    --blue-soft: color-mix(in srgb, #2f6fed 12%, transparent);
+    --muted: #667085;
+    --success: #0f7a4c;
+    --success-soft: color-mix(in srgb, #0f7a4c 12%, transparent);
+    --font: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: var(--font);
+    background:
+      radial-gradient(1100px 520px at 8% -12%, color-mix(in srgb, var(--blue) 10%, transparent), transparent 58%),
+      var(--paper);
+    color: var(--ink);
+  }
+  .shell {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    width: 1100px;
+    height: 700px;
+    margin: 24px auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--paper);
+  }
+  .nav {
+    border-right: 1px solid var(--border);
+    background: color-mix(in srgb, var(--surface) 88%, var(--paper));
+    padding: 16px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .brand { padding: 0 8px 12px; }
+  .brand strong { display: block; font-size: 1.125rem; letter-spacing: -0.02em; }
+  .brand span { font-size: 0.75rem; color: var(--muted); }
+  .group { margin-bottom: 12px; }
+  .label {
+    margin: 0 0 4px;
+    padding: 0 8px;
+    font-size: 0.6875rem;
+    font-weight: 650;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .nav button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--ink-secondary);
+    font: inherit;
+    font-weight: 500;
+    padding: 0.45rem 0.65rem;
+    border-radius: 4px;
+    cursor: default;
+  }
+  .nav button.active {
+    background: var(--blue-soft);
+    color: var(--blue);
+    border-color: color-mix(in srgb, var(--blue) 35%, transparent);
+    font-weight: 650;
+  }
+  .main { padding: 28px 32px; overflow: hidden; }
+  .header { border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 20px; }
+  .header h1 { margin: 0; font-size: 1.25rem; letter-spacing: -0.02em; }
+  .header p { margin: 6px 0 0; color: var(--ink-secondary); font-size: 0.875rem; }
+  .panel {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .panel h2 { margin: 0; font-size: 1rem; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .chip {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
+    background: var(--success-soft);
+    color: var(--success);
+  }
+  .meta { color: var(--muted); font-size: 0.8125rem; line-height: 1.5; margin: 12px 0; }
+  .mono { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 0.8rem; }
+  .actions { display: flex; gap: 8px; margin-top: 12px; }
+  .btn {
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.875rem;
+    padding: 0.5rem 0.9rem;
+    border-radius: 4px;
+    border: 1px solid var(--blue);
+    background: var(--blue);
+    color: #fff;
+  }
+  .btn.ghost {
+    background: transparent;
+    color: var(--ink);
+    border-color: color-mix(in srgb, #667085 55%, transparent);
+  }
+</style>
+</head>
+<body>
+  <div class="shell" id="shot">
+    <nav class="nav">
+      <div class="brand">
+        <strong>Language-LLM</strong>
+        <span>Local companion manager</span>
+      </div>
+      <div class="group">
+        <p class="label">Home</p>
+        <button class="active">Overview</button>
+      </div>
+      <div class="group">
+        <p class="label">Library</p>
+        <button>Models</button>
+        <button>Dictionaries</button>
+      </div>
+      <div class="group">
+        <p class="label">Work</p>
+        <button>Jobs</button>
+      </div>
+      <div class="group">
+        <p class="label">System</p>
+        <button>Hardware</button>
+        <button>Storage & privacy</button>
+        <button>Diagnostics</button>
+      </div>
+      <div class="group">
+        <p class="label">About</p>
+        <button>Licenses</button>
+        <button>Updates</button>
+      </div>
+    </nav>
+    <main class="main">
+      <header class="header">
+        <h1>Overview</h1>
+        <p>Companion health, start/stop, and native-host repair.</p>
+      </header>
+      <section class="panel">
+        <div class="row">
+          <h2>Companion</h2>
+          <span class="chip">Running · :18765</span>
+        </div>
+        <div class="meta">
+          <div>Protocol 1.0.0</div>
+          <div>SQLite ready · catalog ready · sessions 1 · jobs 0</div>
+          <div class="mono">~/Library/Application Support/language-llm</div>
+        </div>
+        <div class="actions">
+          <button class="btn ghost">Stop service</button>
+          <button class="btn ghost">Refresh</button>
+        </div>
+      </section>
+      <section class="panel">
+        <h2>Connect Chrome extension</h2>
+        <p class="meta">One action writes the native messaging manifest and pins the extension ID for loopback WebSocket auth.</p>
+        <div class="actions">
+          <button class="btn">Repair native host</button>
+          <button class="btn ghost">Pin ID only</button>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

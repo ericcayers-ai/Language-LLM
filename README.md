@@ -1,93 +1,112 @@
 ﻿# Language-LLM
 
-Local-first Chrome extension + desktop companion for:
+<p align="center">
+  <img src="docs/assets/readme/hero.jpg" alt="Language-LLM hero: desktop companion, extension popup, and side panel workbench" width="100%" />
+</p>
 
-1. **YouTube language suite** — caption-first subtitles, user-initiated tab capture ASR, context-aware translation, dictionaries, learning
-2. **Website translate** — in-place DOM translation (local MT only)
-3. **Song lyrics** — store-safe karaoke (captions → LRCLIB → import → ASR last)
+<p align="center">
+  <strong>Local-first Chrome extension + desktop companion</strong><br />
+  Captions, translation, dictionaries, and study — inference stays on your machine.
+</p>
 
-Inference stays on your machine. Network is for explicit model/dictionary download, optional attributed LRCLIB fetches, and (when configured) signed updates.
+<p align="center">
+  <a href="./STATUS.md"><img src="https://img.shields.io/badge/status-honest_checklist-2F6FED?style=flat-square" alt="Honest status checklist" /></a>
+  <a href="./CHANGELOG.md"><img src="https://img.shields.io/badge/version-0.1.1-111318?style=flat-square" alt="Version 0.1.1" /></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-0F7A4C?style=flat-square" alt="MIT license" /></a>
+  <img src="https://img.shields.io/badge/branch-main-667085?style=flat-square" alt="Default branch main" />
+</p>
 
-**Default git branch:** **`main`**.
+Honest status lives in **[STATUS.md](./STATUS.md)**. This README is a map of the product — not a GA claim.
 
-Honest status lives in **[STATUS.md](./STATUS.md)**. Do not treat this README as a GA claim.
+---
 
-## Status legend
+## What you get
 
-| Label | Meaning |
+Three surfaces, one local companion:
+
+| Surface | Job |
 | --- | --- |
-| **Implemented** | Code path exists in-repo and is covered by automated tests or intentional smoke wiring |
-| **Development fallback** | Labeled mock/stub used when weights, CLIs, or production pins are absent — never silent fake success in specialist paths |
-| **Weights-required** | Real ASR/MT/VLM needs verified local files under `models/weights/` plus CLIs |
-| **Manually verified** | Human / real-browser gate run and recorded — not assumed from unit tests |
-| **Deferred** | Needs store credentials, notarization secrets, native-speaker QA, or multi-month ops |
+| **Popup** | Launch translate / transcribe / side panel for the active tab |
+| **Side panel** | Transcript, FSRS learning, dictionaries, lyrics, privacy |
+| **Desktop manager** | Start companion, pin extension, models, jobs, hardware, wipe |
 
-## Architecture
+### Extension popup — launcher
 
+<img src="docs/assets/readme/extension-popup.jpg" alt="Language-LLM extension popup with Companion ready status and Translate page primary action" width="420" />
+
+One primary action, clear companion status, host permission in view. Privacy wipe stays out of the way under optional shortcuts.
+
+```text
+Translate page  →  in-place DOM MT (local models / labeled OfflineMock)
+Transcribe tab  →  user-initiated tab capture ASR
+Open side panel →  transcript · learn · dictionary · lyrics · privacy
 ```
-apps/extension     Chrome MV3 (WXT + React/TS)
-apps/desktop       Tauri 2 manager UI + Rust companion (native messaging + loopback WS)
-packages/*         protocol, ui, language-kits, page-translate, lyrics, learning, mt-core
-crates/*           media-pipeline, inference-router, subtitle-core, local-store
-models/catalog.json  license-aware model router catalog (digests often PENDING_*)
-docs/              ADRs, privacy, enterprise, troubleshooting, licenses
+
+### Side panel — workbench
+
+<img src="docs/assets/readme/extension-sidepanel.jpg" alt="Language-LLM side panel showing Transcript tab with Japanese cues and Ready status" width="360" />
+
+Tabbed IA so each job has one place:
+
+- **Transcript** — searchable cues, seek on select  
+- **Learn** — FSRS reviews when due  
+- **Dictionary** — import + lookup  
+- **Lyrics** — LRC/TTML import or attributed LRCLIB  
+- **Privacy** — retention presets and scoped wipe  
+
+Density profiles (**Focus / Balanced / Expert**) hide nonessential chrome when you want less noise.
+
+### Desktop manager — companion control
+
+<img src="docs/assets/readme/desktop-overview.jpg" alt="Language-LLM desktop Overview with grouped nav and companion Running status" width="900" />
+
+Grouped navigation: Home · Library · Work · System · About. Overview shows health, start/stop, and one-click native-host repair.
+
+```bash
+pnpm --filter @language-llm/desktop tauri:dev   # Tauri 2 + --features gui
 ```
 
-Hard constraints: **no automatic YouTube downloading**; **no proprietary lyric-site scraping**; **commercially redistributable model defaults** when packs are offered (Hy-MT2, MADLAD, Whisper, Qwen3.*, etc.).
+---
 
-Application source is MIT ([LICENSE](./LICENSE)). Model weights and dictionaries keep **upstream** licenses — see [docs/licenses/model-matrix.md](./docs/licenses/model-matrix.md) and [docs/licenses/ATTRIBUTIONS.md](./docs/licenses/ATTRIBUTIONS.md).
+## Quick start
 
-## Prerequisites
-
-- Node.js ≥ 20
-- pnpm 9 (`corepack enable && corepack prepare pnpm@9.15.0 --activate`)
-- Rust stable (`rustup`)
-
-## Setup
+**Prerequisites:** Node.js ≥ 20 · pnpm 9 · Rust stable
 
 ```bash
 corepack enable
+corepack prepare pnpm@9.15.0 --activate
 pnpm install
-pnpm verify          # JS tests + typecheck + cargo test --workspace (see scripts/verify.mjs)
+pnpm verify          # JS + Rust quality gates (see scripts/verify.mjs)
 ```
 
-## How to run
-
-### 1. Companion — headless (CI / extension without window)
+### 1. Companion (headless)
 
 ```bash
 cargo run -p language-llm-desktop -- --serve
-# Stdout bootstrap JSON: port + bootstrapToken + protocolVersion
-# Health: http://127.0.0.1:<port>/health
-# WS:     ws://127.0.0.1:<port>/v1?t=<bootstrapToken>
+# stdout bootstrap JSON → port + bootstrapToken + protocolVersion
+# health: http://127.0.0.1:<port>/health
+# ws:     ws://127.0.0.1:<port>/v1?t=<bootstrapToken>
 ```
 
-Without `--serve`, the process still supports native-messaging / GUI entrypoints depending on how it is launched. Prefer `--serve` for loopback-only smoke.
+Auth: `auth.handshake.request` (`@language-llm/protocol`) → `sessionToken`.  
+ASR / MT / page-translate use **real whisper/llama CLIs when verified weights are installed**; otherwise commercial paths use a labeled **OfflineMock**. Specialists return **model not installed** — never silent fake success.
 
-Auth: client sends `auth.handshake.request` (`@language-llm/protocol`); companion returns `sessionToken`. Translate / ASR / page-translate jobs use **real whisper/llama CLIs when verified weights are installed**; otherwise commercial paths use a labeled **OfflineMock** development fallback. Specialists return **model not installed** (not silent mock).
+SQLite defaults to the OS data dir under `language-llm/` (override with `LANGUAGE_LLM_DATA_DIR`).
 
-SQLite defaults to the OS data dir under `language-llm/` (`dirs::data_dir()`, e.g. `%APPDATA%\language-llm` on Windows). Override with `LANGUAGE_LLM_DATA_DIR`.
-
-### 2. Desktop manager (Tauri 2)
-
-**Implemented** as a real Tauri 2 app with React + `@language-llm/ui` views (Overview, Models, Dictionaries, Storage & privacy, Jobs, Hardware, Diagnostics, Licenses, Updates). Updater **pubkey is a placeholder** until release secrets exist — do not claim signing/notarization works yet.
+### 2. Extension (unpacked)
 
 ```bash
-pnpm --filter @language-llm/desktop tauri:dev   # builds with --features gui
+pnpm --filter @language-llm/extension dev
+# Load apps/extension/.output/chrome-mv3-dev in chrome://extensions
 ```
 
-Pin the extension for release WS Origin checks:
+### 3. Native messaging
 
-- `LANGUAGE_LLM_EXTENSION_ID=<chrome-extension-id>`, or
-- `data_dir/extension_id` (Overview → Pin ID / Repair native host)
-
-### 3. Native messaging (extension bootstrap)
-
-Host name: **`com.languagellm.companion`**.
+Host name: **`com.languagellm.companion`**
 
 ```bash
 cargo build -p language-llm-desktop --release
-# Load unpacked extension once, copy ID from chrome://extensions, then:
+# Load unpacked extension once, copy ID from chrome://extensions
 
 # Windows
 powershell -File apps/desktop/scripts/register-windows.ps1 -ExtensionId <id>
@@ -97,26 +116,65 @@ powershell -File apps/desktop/scripts/register-windows.ps1 -ExtensionId <id>
 ./apps/desktop/scripts/register-linux.sh <id>
 ```
 
-Uninstall native host: `uninstall-windows.ps1` / `uninstall-macos.sh` / `uninstall-linux.sh`.  
-Full steps: [apps/desktop/scripts/README.md](./apps/desktop/scripts/README.md).  
-Data removal / wipe: [docs/privacy.md](./docs/privacy.md) and [docs/troubleshooting.md](./docs/troubleshooting.md).
+Pin for release WS Origin checks: `LANGUAGE_LLM_EXTENSION_ID=<id>` or Overview → **Repair native host**.  
+Scripts: [apps/desktop/scripts/README.md](./apps/desktop/scripts/README.md).
 
-### 4. Extension (unpacked)
+---
 
-```bash
-pnpm --filter @language-llm/extension dev
-# Load apps/extension/.output/chrome-mv3-dev in chrome://extensions
+## Architecture
+
+<p align="center">
+  <img src="docs/assets/readme/architecture.svg" alt="Architecture: Chrome extension surfaces connect to a local desktop companion; inference and SQLite stay on device" width="100%" />
+</p>
+
+```text
+apps/extension     Chrome MV3 (WXT + React/TS)
+apps/desktop       Tauri 2 manager + Rust companion (native messaging + loopback WS)
+packages/*         protocol, ui, language-kits, page-translate, lyrics, learning, mt-core
+crates/*           media-pipeline, inference-router, subtitle-core, local-store
+models/catalog.json  license-aware router catalog (digests often PENDING_*)
+docs/              ADRs, privacy, enterprise, troubleshooting, licenses
 ```
 
-Surfaces: popup (launcher), YouTube overlay, side panel, page-translate toolbar. Density profiles **Focus / Balanced / Expert** via `@language-llm/ui` (`ProfilePicker`).
+**Hard constraints**
 
-Live YouTube caption SPA behavior and gesture-gated `tabCapture` are **not** claimed as manually verified in CI — see STATUS.md.
+- No automatic YouTube downloading  
+- No proprietary lyric-site scraping  
+- Commercially redistributable model defaults when packs are offered (Hy-MT2, MADLAD, Whisper, Qwen3.*, …)
+
+Application source is MIT ([LICENSE](./LICENSE)). Model weights and dictionaries keep **upstream** licenses — [docs/licenses/model-matrix.md](./docs/licenses/model-matrix.md) · [docs/licenses/ATTRIBUTIONS.md](./docs/licenses/ATTRIBUTIONS.md).
+
+---
+
+## Product lanes
+
+1. **YouTube language suite** — caption-first subtitles, user-initiated tab capture ASR, context-aware translation, dictionaries, learning  
+2. **Website translate** — in-place DOM translation (local MT only)  
+3. **Song lyrics** — store-safe karaoke path: captions → LRCLIB → import → ASR last  
+
+Network is for explicit model/dictionary download, optional attributed LRCLIB fetches, and (when configured) signed updates.
+
+### Overlay shortcuts
+
+| Chord | Action |
+| --- | --- |
+| **S** | Source |
+| **T** | Translation |
+| **R** | Reveal |
+| **M** | Mine |
+| **K** | Known |
+| **?** | Help |
+| **Esc** | Blur |
+
+Do not steal YouTube keys when the overlay is unfocused. Full list: [docs/troubleshooting.md](./docs/troubleshooting.md#accessibility-shortcuts).
+
+---
 
 ## Local models
 
 Weights are **not** committed. Until verified files land under `models/weights/<id>/` with a real SHA-256 (not `sha256:PENDING_*`) and a `.installed` marker, Whisper / Hy-MT2 / MADLAD stay on labeled offline mocks.
 
-```
+```text
 <repo-or-LANGUAGE_LLM_DATA_DIR>/
   models/catalog.json
   models/bin/                          # optional: whisper-cli / llama-cli
@@ -127,33 +185,35 @@ Weights are **not** committed. Until verified files land under `models/weights/<
 
 Details: [models/README.md](./models/README.md).
 
-## Accessibility shortcuts (overlay)
+---
 
-Alt+letter chords (or focused overlay): **S** source · **T** translation · **R** reveal · **M** mine · **K** known · **?** help · **Esc** blur.  
-Do not steal YouTube keys when the overlay is unfocused. Full list: [docs/troubleshooting.md](./docs/troubleshooting.md#accessibility-shortcuts).
+## Status legend
 
-## Legal / source constraints
+| Label | Meaning |
+| --- | --- |
+| **Implemented** | In-repo path with tests or intentional smoke wiring |
+| **Development fallback** | Labeled mock/stub when weights/CLIs/pins are absent |
+| **Weights-required** | Needs verified local weights + CLIs |
+| **Manually verified** | Human / real-browser gate recorded |
+| **Deferred** | Store credentials, notarization, native-speaker QA, ops |
 
-- **No YouTube downloading** — caption track on page → user-initiated `tabCapture` → owned-media import only
-- Page translate: on-device text; originals recoverable
-- Lyrics: captions / LRCLIB (attributed) / user import / ASR — never Genius-style scrapers
-- Local-first: inference and transcripts stay on device
+Live YouTube SPA caption behavior and gesture-gated `tabCapture` are **not** claimed as manually verified in CI — see [STATUS.md](./STATUS.md).
 
-## Contributing & community
+UI preview images under `docs/assets/readme/` reflect the **v0.1.1** product shell (accurate chrome + example copy).
 
-- [CONTRIBUTING.md](./CONTRIBUTING.md) · [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)
-- [SECURITY.md](./SECURITY.md) · [CHANGELOG.md](./CHANGELOG.md)
-- [docs/privacy.md](./docs/privacy.md) · [docs/enterprise-chrome.md](./docs/enterprise-chrome.md)
+---
 
-## Docs index
+## Docs & community
 
 | Doc | Purpose |
 | --- | --- |
 | [STATUS.md](./STATUS.md) | Implemented vs fallback vs weights vs manual vs deferred |
+| [CHANGELOG.md](./CHANGELOG.md) | Release notes |
 | [docs/architecture](./docs/architecture/README.md) | ADRs, threat model, fidelity, source policy |
-| [docs/licenses/model-matrix.md](./docs/licenses/model-matrix.md) | License posture |
-| [docs/licenses/ATTRIBUTIONS.md](./docs/licenses/ATTRIBUTIONS.md) | Attribution / notice text |
 | [docs/privacy.md](./docs/privacy.md) | Retention, wipe, uninstall |
 | [docs/troubleshooting.md](./docs/troubleshooting.md) | IDs, companion, models, a11y |
-| [docs/enterprise-chrome.md](./docs/enterprise-chrome.md) | Enterprise / force-install guidance |
+| [docs/enterprise-chrome.md](./docs/enterprise-chrome.md) | Enterprise / force-install |
+| [docs/licenses/model-matrix.md](./docs/licenses/model-matrix.md) | License posture |
 | [apps/desktop/README.md](./apps/desktop/README.md) | Tauri manager modes |
+
+[CONTRIBUTING.md](./CONTRIBUTING.md) · [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) · [SECURITY.md](./SECURITY.md)
