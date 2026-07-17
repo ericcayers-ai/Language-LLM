@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Language-LLM Side Panel Preview</title>
+<style>
+  :root {
+    --ink: #111318;
+    --ink-secondary: #3d4450;
+    --paper: #f7f8fa;
+    --surface: #ffffff;
+    --surface-raised: #eef0f4;
+    --border: color-mix(in srgb, #667085 32%, transparent);
+    --blue: #2f6fed;
+    --blue-soft: color-mix(in srgb, #2f6fed 12%, transparent);
+    --muted: #667085;
+    --success: #0f7a4c;
+    --success-soft: color-mix(in srgb, #0f7a4c 12%, transparent);
+    --font: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    background: #cfd5e0;
+    font-family: var(--font);
+  }
+  .frame {
+    width: 420px;
+    height: 720px;
+    background: #1a1d26;
+    border-radius: 12px;
+    padding: 10px;
+  }
+  .panel {
+    height: 100%;
+    background: var(--paper);
+    color: var(--ink);
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .top { display: flex; justify-content: space-between; align-items: flex-start; }
+  h1 { margin: 0; font-size: 1.1rem; letter-spacing: -0.02em; }
+  .sub { margin: 4px 0 0; font-size: 0.8125rem; color: var(--ink-secondary); }
+  .chip {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
+    background: var(--success-soft);
+    color: var(--success);
+  }
+  .tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 3px;
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .tab {
+    flex: 1 1 auto;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--ink-secondary);
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 550;
+    padding: 0.45rem 0.55rem;
+    border-radius: 4px;
+  }
+  .tab.active {
+    background: var(--surface);
+    color: var(--ink);
+    border-color: var(--border);
+    font-weight: 650;
+  }
+  .cues {
+    flex: 1;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    overflow: hidden;
+  }
+  .search {
+    width: 100%;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    padding: 10px 12px;
+    font: inherit;
+    font-size: 0.8125rem;
+    background: transparent;
+    color: var(--muted);
+  }
+  .cue {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.875rem;
+  }
+  .cue.active { background: var(--blue-soft); }
+  .cue time {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-family: ui-monospace, monospace;
+    margin-bottom: 2px;
+  }
+  .foot {
+    border-top: 1px solid var(--border);
+    padding-top: 8px;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+  <div class="frame" id="shot">
+    <div class="panel">
+      <header class="top">
+        <div>
+          <h1>Language-LLM</h1>
+          <p class="sub">Workbench for this tab</p>
+        </div>
+        <span class="chip">Ready</span>
+      </header>
+      <div class="tabs">
+        <button class="tab active">Transcript</button>
+        <button class="tab">Learn</button>
+        <button class="tab">Dictionary</button>
+        <button class="tab">Lyrics</button>
+        <button class="tab">Privacy</button>
+      </div>
+      <div class="cues">
+        <div class="search">Search cues…</div>
+        <div class="cue">
+          <time>0:12</time>
+          今日は駅の近くでランチを食べました。
+        </div>
+        <div class="cue active">
+          <time>0:18</time>
+          とても美味しかったです。また行きたいです。
+        </div>
+        <div class="cue">
+          <time>0:24</time>
+          次は公園に散歩しに行きましょう。
+        </div>
+        <div class="cue">
+          <time>0:31</time>
+          字幕があるので一緒に学べます。
+        </div>
+      </div>
+      <div class="foot">Density: Balanced · Click a cue to seek the video</div>
+    </div>
+  </div>
+</body>
+</html>

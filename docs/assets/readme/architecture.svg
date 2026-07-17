@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="420" viewBox="0 0 1120 420" role="img" aria-labelledby="title desc">
+  <title id="title">Language-LLM architecture</title>
+  <desc id="desc">Chrome extension surfaces talk to a local desktop companion over native messaging and loopback WebSocket; inference and SQLite stay on device.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F7F8FA"/>
+      <stop offset="100%" stop-color="#EEF0F4"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#667085"/>
+    </marker>
+  </defs>
+  <rect width="1120" height="420" rx="12" fill="url(#bg)"/>
+  <rect x="24" y="24" width="1072" height="372" rx="10" fill="#FFFFFF" stroke="#D0D5DD"/>
+
+  <!-- Extension cluster -->
+  <rect x="56" y="72" width="300" height="280" rx="10" fill="#F7F8FA" stroke="#D0D5DD"/>
+  <text x="76" y="104" font-family="Segoe UI, Atkinson Hyperlegible, sans-serif" font-size="14" font-weight="700" fill="#667085" letter-spacing="1.2">EXTENSION</text>
+  <rect x="76" y="124" width="260" height="52" rx="6" fill="#FFFFFF" stroke="#2F6FED"/>
+  <text x="92" y="155" font-family="Segoe UI, sans-serif" font-size="16" font-weight="650" fill="#111318">Popup launcher</text>
+  <rect x="76" y="192" width="260" height="52" rx="6" fill="#FFFFFF" stroke="#D0D5DD"/>
+  <text x="92" y="223" font-family="Segoe UI, sans-serif" font-size="16" font-weight="650" fill="#111318">Side panel workbench</text>
+  <rect x="76" y="260" width="260" height="52" rx="6" fill="#FFFFFF" stroke="#D0D5DD"/>
+  <text x="92" y="291" font-family="Segoe UI, sans-serif" font-size="16" font-weight="650" fill="#111318">YouTube / page overlays</text>
+
+  <!-- Companion -->
+  <rect x="430" y="72" width="300" height="280" rx="10" fill="#F7F8FA" stroke="#D0D5DD"/>
+  <text x="450" y="104" font-family="Segoe UI, sans-serif" font-size="14" font-weight="700" fill="#667085" letter-spacing="1.2">DESKTOP COMPANION</text>
+  <rect x="450" y="124" width="260" height="64" rx="6" fill="#FFFFFF" stroke="#2F6FED"/>
+  <text x="466" y="150" font-family="Segoe UI, sans-serif" font-size="16" font-weight="650" fill="#111318">Tauri manager UI</text>
+  <text x="466" y="172" font-family="Segoe UI, sans-serif" font-size="13" fill="#667085">models · privacy · jobs</text>
+  <rect x="450" y="208" width="260" height="64" rx="6" fill="#FFFFFF" stroke="#D0D5DD"/>
+  <text x="466" y="234" font-family="Segoe UI, sans-serif" font-size="16" font-weight="650" fill="#111318">Rust service</text>
+  <text x="466" y="256" font-family="Segoe UI, sans-serif" font-size="13" fill="#667085">native host + loopback WS</text>
+  <rect x="450" y="292" width="260" height="40" rx="6" fill="#EEF0F4" stroke="#D0D5DD"/>
+  <text x="466" y="317" font-family="Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#3D4450">SQLite · retention · wipe</text>
+
+  <!-- Local inference -->
+  <rect x="804" y="72" width="260" height="280" rx="10" fill="#F7F8FA" stroke="#D0D5DD"/>
+  <text x="824" y="104" font-family="Segoe UI, sans-serif" font-size="14" font-weight="700" fill="#667085" letter-spacing="1.2">ON YOUR MACHINE</text>
+  <rect x="824" y="124" width="220" height="56" rx="6" fill="#FFFFFF" stroke="#D0D5DD"/>
+  <text x="840" y="157" font-family="Segoe UI, sans-serif" font-size="15" font-weight="650" fill="#111318">Whisper / llama CLIs</text>
+  <rect x="824" y="196" width="220" height="56" rx="6" fill="#FFFFFF" stroke="#D0D5DD"/>
+  <text x="840" y="229" font-family="Segoe UI, sans-serif" font-size="15" font-weight="650" fill="#111318">Verified model packs</text>
+  <rect x="824" y="268" width="220" height="56" rx="6" fill="#FFFFFF" stroke="#D0D5DD"/>
+  <text x="840" y="301" font-family="Segoe UI, sans-serif" font-size="15" font-weight="650" fill="#111318">Dictionaries · study</text>
+
+  <!-- Arrows -->
+  <line x1="356" y1="212" x2="430" y2="212" stroke="#667085" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="362" y="198" font-family="Segoe UI, sans-serif" font-size="12" fill="#667085">native + WS</text>
+  <line x1="730" y1="240" x2="804" y2="240" stroke="#667085" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="736" y="226" font-family="Segoe UI, sans-serif" font-size="12" fill="#667085">local only</text>
+
+  <text x="56" y="380" font-family="Segoe UI, sans-serif" font-size="13" fill="#667085">Inference stays local. Network is for explicit downloads, optional attributed LRCLIB, and signed updates when configured.</text>
+</svg>

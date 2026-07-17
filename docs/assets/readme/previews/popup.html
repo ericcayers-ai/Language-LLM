@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Language-LLM Popup Preview</title>
+<style>
+  :root {
+    --ink: #111318;
+    --ink-secondary: #3d4450;
+    --paper: #f7f8fa;
+    --surface: #ffffff;
+    --border: color-mix(in srgb, #667085 32%, transparent);
+    --blue: #2f6fed;
+    --blue-hover: #255fd4;
+    --muted: #667085;
+    --success: #0f7a4c;
+    --success-soft: color-mix(in srgb, #0f7a4c 12%, transparent);
+    --font: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    background: #d8dde6;
+    font-family: var(--font);
+  }
+  .chrome {
+    width: 380px;
+    padding: 18px;
+    background: linear-gradient(180deg, #e9edf4, #d5dbe6);
+    border-radius: 14px;
+  }
+  .popup {
+    width: 340px;
+    margin: 0 auto;
+    padding: 14px;
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--ink);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  h1 { margin: 0; font-size: 1.05rem; letter-spacing: -0.02em; }
+  .chip {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
+    background: var(--success-soft);
+    color: var(--success);
+  }
+  .tab {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--ink-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .actions { display: flex; flex-direction: column; gap: 8px; }
+  .btn {
+    width: 100%;
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.875rem;
+    padding: 0.55rem 0.9rem;
+    border-radius: 4px;
+    border: 1px solid var(--blue);
+    background: var(--blue);
+    color: #fff;
+  }
+  .btn.ghost {
+    background: transparent;
+    color: var(--ink);
+    border-color: color-mix(in srgb, #667085 55%, transparent);
+  }
+  .perm {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 4px;
+    border-top: 1px solid var(--border);
+  }
+  .perm-row { display: flex; justify-content: space-between; align-items: center; }
+  .meta { font-size: 0.8125rem; color: var(--muted); }
+  .chip.neutral {
+    background: var(--surface);
+    border-color: var(--border);
+    color: var(--ink-secondary);
+  }
+  .footer { margin: 0; font-size: 0.6875rem; color: var(--muted); line-height: 1.4; }
+</style>
+</head>
+<body>
+  <div class="chrome" id="shot">
+    <div class="popup">
+      <header>
+        <div class="top">
+          <h1>Language-LLM</h1>
+          <span class="chip">Companion ready</span>
+        </div>
+        <p class="tab">日本語で学ぶ — Travel vlog #42 - YouTube</p>
+      </header>
+      <section class="actions">
+        <button class="btn">Translate page</button>
+        <button class="btn ghost">Transcribe tab</button>
+        <button class="btn ghost">Open side panel</button>
+      </section>
+      <section class="perm">
+        <div class="perm-row">
+          <span class="meta">Website hosts</span>
+          <span class="chip">Granted</span>
+        </div>
+        <button class="btn ghost">Revoke permission</button>
+      </section>
+      <p class="footer">Transcript, learning, dictionaries, and lyrics live in the side panel.</p>
+    </div>
+  </div>
+</body>
+</html>

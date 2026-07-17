@@ -8,6 +8,10 @@ Until then, entries track monorepo overhaul milestones. **Do not** read pre-1.0 
 
 ## [Unreleased]
 
+### Changed
+
+- Root README visual revamp: product-shell previews, architecture diagram, clearer surface examples (`docs/assets/readme/`)
+
 ### Fixed
 
 -
