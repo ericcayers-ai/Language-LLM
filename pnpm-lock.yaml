@@ -64,7 +64,7 @@ importers:
         version: 6.4.3(@types/node@26.1.1)(jiti@2.7.0)
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@26.1.1)(happy-dom@20.10.6)(jsdom@26.1.0)
+        version: 2.1.9(@types/node@26.1.1)(happy-dom@20.11.0)(jsdom@26.1.0)
 
   apps/extension:
     dependencies:
@@ -110,7 +110,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@26.1.1)(happy-dom@20.10.6)(jsdom@26.1.0)
+        version: 2.1.9(@types/node@26.1.1)(happy-dom@20.11.0)(jsdom@26.1.0)
       wxt:
         specifier: ^0.19.22
         version: 0.19.29(@types/node@26.1.1)(rollup@4.62.2)
@@ -138,7 +138,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@26.1.1)(happy-dom@20.10.6)(jsdom@26.1.0)
+        version: 2.1.9(@types/node@26.1.1)(happy-dom@20.11.0)(jsdom@26.1.0)
 
   packages/language-kits:
     devDependencies:
@@ -147,7 +147,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@26.1.1)(happy-dom@20.10.6)(jsdom@26.1.0)
+        version: 2.1.9(@types/node@26.1.1)(happy-dom@20.11.0)(jsdom@26.1.0)
 
   packages/learning:
     dependencies:
@@ -160,7 +160,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@26.1.1)(happy-dom@20.10.6)(jsdom@26.1.0)
+        version: 2.1.9(@types/node@26.1.1)(happy-dom@20.11.0)(jsdom@26.1.0)
 
   packages/lyrics:
     dependencies:
@@ -173,7 +173,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@26.1.1)(happy-dom@20.10.6)(jsdom@26.1.0)
+        version: 2.1.9(@types/node@26.1.1)(happy-dom@20.11.0)(jsdom@26.1.0)
 
   packages/mt-core:
     dependencies:
@@ -186,7 +186,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@26.1.1)(happy-dom@20.10.6)(jsdom@26.1.0)
+        version: 2.1.9(@types/node@26.1.1)(happy-dom@20.11.0)(jsdom@26.1.0)
 
   packages/page-translate:
     dependencies:
@@ -195,14 +195,14 @@ importers:
         version: link:../protocol
     devDependencies:
       happy-dom:
-        specifier: ^20.10.6
-        version: 20.10.6
+        specifier: ^20.11.0
+        version: 20.11.0
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@26.1.1)(happy-dom@20.10.6)(jsdom@26.1.0)
+        version: 2.1.9(@types/node@26.1.1)(happy-dom@20.11.0)(jsdom@26.1.0)
 
   packages/protocol:
     dependencies:
@@ -215,7 +215,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@26.1.1)(happy-dom@20.10.6)(jsdom@26.1.0)
+        version: 2.1.9(@types/node@26.1.1)(happy-dom@20.11.0)(jsdom@26.1.0)
 
   packages/ui:
     devDependencies:
@@ -248,10 +248,10 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@26.1.1)(happy-dom@20.10.6)(jsdom@26.1.0)
+        version: 2.1.9(@types/node@26.1.1)(happy-dom@20.11.0)(jsdom@26.1.0)
       vitest-axe:
         specifier: ^0.1.0
-        version: 0.1.0(vitest@2.1.9(@types/node@26.1.1)(happy-dom@20.10.6)(jsdom@26.1.0))
+        version: 0.1.0(vitest@2.1.9(@types/node@26.1.1)(happy-dom@20.11.0)(jsdom@26.1.0))
 
 packages:
 
@@ -347,6 +347,10 @@ packages:
 
   '@babel/runtime@7.28.2':
     resolution: {integrity: sha512-KHp2IflsnGywDjBWDkR9iEqiWSpc8GIi0lgTT3mOElT0PP1tG26P4tmFI2YvAdzgq9RGyoHZQEIEdZy6Ec5xCA==}
+    engines: {node: '>=6.9.0'}
+
+  '@babel/runtime@7.29.7':
+    resolution: {integrity: sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw==}
     engines: {node: '>=6.9.0'}
 
   '@babel/template@7.29.7':
@@ -1680,8 +1684,8 @@ packages:
   growly@1.3.0:
     resolution: {integrity: sha512-+xGQY0YyAWCnqy7Cd++hc2JqMYzlm0dG30Jd0beaA64sROr8C4nt8Yc9V5Ro3avlSUDTN0ulqP/VBKi1/lLygw==}
 
-  happy-dom@20.10.6:
-    resolution: {integrity: sha512-6QD0ilzDDt93tX44y8tbmZdAcdTRYDhUP+Asgi6pC8Pp5IA3cvaZGyoVN/EGtlq9ziT65iPuBBn3ASLr6hCgVw==}
+  happy-dom@20.11.0:
+    resolution: {integrity: sha512-XogN4asPd1a56di9prVG6bZxteNcXsZxxKmAvcEfc5Px5Ca2hMyMgk8wvqK2K1V8zXg40j9VANXsDaJYh9DeNA==}
     engines: {node: '>=20.0.0'}
 
   hookable@5.5.3:
@@ -2962,6 +2966,8 @@ snapshots:
 
   '@babel/runtime@7.28.2': {}
 
+  '@babel/runtime@7.29.7': {}
+
   '@babel/template@7.29.7':
     dependencies:
       '@babel/code-frame': 7.29.7
@@ -3368,7 +3374,7 @@ snapshots:
   '@testing-library/dom@10.4.1':
     dependencies:
       '@babel/code-frame': 7.29.7
-      '@babel/runtime': 7.28.2
+      '@babel/runtime': 7.29.7
       '@types/aria-query': 5.0.4
       aria-query: 5.3.0
       dom-accessibility-api: 0.5.16
@@ -4095,7 +4101,7 @@ snapshots:
 
   growly@1.3.0: {}
 
-  happy-dom@20.10.6:
+  happy-dom@20.11.0:
     dependencies:
       '@types/node': 26.1.1
       '@types/whatwg-mimetype': 3.0.2
@@ -5072,7 +5078,7 @@ snapshots:
       fsevents: 2.3.3
       jiti: 2.7.0
 
-  vitest-axe@0.1.0(vitest@2.1.9(@types/node@26.1.1)(happy-dom@20.10.6)(jsdom@26.1.0)):
+  vitest-axe@0.1.0(vitest@2.1.9(@types/node@26.1.1)(happy-dom@20.11.0)(jsdom@26.1.0)):
     dependencies:
       aria-query: 5.3.2
       axe-core: 4.12.1
@@ -5080,9 +5086,9 @@ snapshots:
       dom-accessibility-api: 0.5.16
       lodash-es: 4.18.1
       redent: 3.0.0
-      vitest: 2.1.9(@types/node@26.1.1)(happy-dom@20.10.6)(jsdom@26.1.0)
+      vitest: 2.1.9(@types/node@26.1.1)(happy-dom@20.11.0)(jsdom@26.1.0)
 
-  vitest@2.1.9(@types/node@26.1.1)(happy-dom@20.10.6)(jsdom@26.1.0):
+  vitest@2.1.9(@types/node@26.1.1)(happy-dom@20.11.0)(jsdom@26.1.0):
     dependencies:
       '@vitest/expect': 2.1.9
       '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@26.1.1))
@@ -5106,7 +5112,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 26.1.1
-      happy-dom: 20.10.6
+      happy-dom: 20.11.0
       jsdom: 26.1.0
     transitivePeerDependencies:
       - less
