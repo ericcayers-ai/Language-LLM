@@ -9,6 +9,7 @@ import {
   StatusRegion,
   TranscriptList,
   useDensity,
+  type StatusTone,
   type TranscriptItem,
 } from "@language-llm/ui";
 import "@language-llm/ui/tokens.css";
@@ -38,7 +39,16 @@ function SidePanelInner() {
   const [items, setItems] = useState<TranscriptItem[]>([]);
   const [activeId, setActiveId] = useState<string | undefined>();
   const [companion, setCompanion] = useState<CompanionUi>("unknown");
-  const [status, setStatus] = useState("");
+  const [status, setStatusState] = useState<{
+    message: string;
+    tone: StatusTone;
+  }>({ message: "", tone: "info" });
+  const setStatus = useCallback(
+    (message: string, tone: StatusTone = "info") => {
+      setStatusState({ message, tone });
+    },
+    [],
+  );
   const [due, setDue] = useState<StudyCard[]>([]);
   const [dictCount, setDictCount] = useState(0);
   const [dictAttr, setDictAttr] = useState("");
@@ -91,11 +101,27 @@ function SidePanelInner() {
 
   useEffect(() => {
     void (async () => {
-      await refreshCompanion();
-      const ret = await getRetention();
-      if (ret.preset) setRetentionState(ret.preset);
-      await refreshDictStats();
-      await refreshStudy();
+      try {
+        await refreshCompanion();
+      } catch {
+        setCompanion("down");
+      }
+      try {
+        const ret = await getRetention();
+        if (ret.preset) setRetentionState(ret.preset);
+      } catch {
+        // retention preset is best-effort; keep the default on failure
+      }
+      try {
+        await refreshDictStats();
+      } catch {
+        // dictionary stats are best-effort
+      }
+      try {
+        await refreshStudy();
+      } catch {
+        // study session hydration is best-effort
+      }
     })();
 
     chrome.storage.local.get(
@@ -173,6 +199,7 @@ function SidePanelInner() {
                       : ping.degraded
                         ? "Companion degraded (native only)"
                         : "Companion still offline",
+                    ping.ready ? "success" : ping.degraded ? "warn" : "error",
                   );
                 });
               },
@@ -220,7 +247,7 @@ function SidePanelInner() {
                             new Event("language-llm:transcribe-tab"),
                           ),
                       });
-                      setStatus("Capture requested on active tab");
+                      setStatus("Capture requested on active tab", "success");
                     },
                   );
                 },
@@ -263,7 +290,7 @@ function SidePanelInner() {
             onRate={(rating) => {
               void (async () => {
                 await studyRef.current?.review(reviewCard.id, rating);
-                setStatus(`Rated ${rating}`);
+                setStatus(`Rated ${rating}`, "success");
                 await refreshStudy();
               })();
             }}
@@ -277,7 +304,7 @@ function SidePanelInner() {
             onClick={() => {
               const csv = studyRef.current?.exportCsv() ?? "";
               void navigator.clipboard?.writeText(csv);
-              setStatus("CSV copied to clipboard");
+              setStatus("CSV copied to clipboard", "success");
             }}
           >
             Copy CSV export
@@ -310,6 +337,7 @@ function SidePanelInner() {
               viaCompanion
                 ? `Imported ${count} ${format} entries into companion`
                 : `Cached ${count} ${format} entries locally — companion import pending`,
+              viaCompanion ? "success" : "warn",
             );
           }}
         />
@@ -322,12 +350,14 @@ function SidePanelInner() {
             className="llm-focus-ring"
             style={{
               flex: 1,
+              minWidth: 0,
               padding: "0.4rem 0.5rem",
               border: "1px solid var(--llm-muted-slate)",
             }}
           />
           <Button
             variant="ghost"
+            style={{ flexShrink: 0 }}
             onClick={() => {
               void (async () => {
                 const hit = await lookupDictionary(lookupQ.trim());
@@ -397,6 +427,7 @@ function SidePanelInner() {
                   res.ok
                     ? `Retention set to ${preset}`
                     : res.error ?? "Retention update failed",
+                  res.ok ? "success" : "error",
                 );
               });
             }}
@@ -416,6 +447,7 @@ function SidePanelInner() {
                   res.ok
                     ? "Page translation cache cleared"
                     : res.error ?? "Wipe failed",
+                  res.ok ? "success" : "error",
                 );
               });
             }}
@@ -428,6 +460,7 @@ function SidePanelInner() {
               void wipePrivacy("lyrics").then((res) => {
                 setStatus(
                   res.ok ? "Lyrics cache cleared" : res.error ?? "Wipe failed",
+                  res.ok ? "success" : "error",
                 );
               });
             }}
@@ -457,9 +490,9 @@ function SidePanelInner() {
                   studyRef.current = new StudySession(createCompanionStudyStore());
                   await studyRef.current.hydrate();
                   setDue([]);
-                  setStatus("Privacy wipe completed");
+                  setStatus("Privacy wipe completed", "success");
                 } else {
-                  setStatus(res.error ?? "Privacy wipe failed");
+                  setStatus(res.error ?? "Privacy wipe failed", "error");
                 }
               });
             }}
@@ -499,7 +532,9 @@ function SidePanelInner() {
         <LyricsActions lyricsNet={lyricsNet} onStatus={setStatus} />
       </section>
 
-      {status ? <StatusRegion message={status} tone="info" /> : null}
+      {status.message ? (
+        <StatusRegion message={status.message} tone={status.tone} />
+      ) : null}
 
       {profile === "expert" ? (
         <section data-llm-chrome="diagnostics" aria-label="Diagnostics">
@@ -595,7 +630,7 @@ function LyricsActions({
   onStatus,
 }: {
   lyricsNet: boolean;
-  onStatus: (s: string) => void;
+  onStatus: (s: string, tone?: StatusTone) => void;
 }) {
   const fileRef = React.useRef<HTMLInputElement>(null);
   return (
@@ -625,7 +660,10 @@ function LyricsActions({
               format,
               content,
             });
-            onStatus(`Imported ${format} lyrics (attributed to local file)`);
+            onStatus(
+              `Imported ${format} lyrics (attributed to local file)`,
+              "success",
+            );
           };
           reader.readAsText(file);
         }}
@@ -646,6 +684,7 @@ function LyricsActions({
                 if (res?.ok && res.result?.lrc) {
                   onStatus(
                     "LRCLIB match ready — confirm on the video overlay before applying",
+                    "success",
                   );
                   if (tabs[0]?.id) {
                     chrome.tabs.sendMessage(tabs[0].id, {
@@ -655,7 +694,7 @@ function LyricsActions({
                     });
                   }
                 } else {
-                  onStatus(res?.error ?? "No LRCLIB match");
+                  onStatus(res?.error ?? "No LRCLIB match", "warn");
                 }
               },
             );

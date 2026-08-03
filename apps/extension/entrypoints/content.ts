@@ -38,6 +38,7 @@ export default defineContentScript({
     "*://youtube.com/*",
     "*://music.youtube.com/*",
     "*://m.youtube.com/*",
+    "*://www.netflix.com/*",
   ],
   cssInjectionMode: "ui",
   async main() {
@@ -64,7 +65,7 @@ export default defineContentScript({
             ? { translationText: translation.text }
             : {}),
           ...(videoId ? { videoId } : {}),
-          tags: ["mined", "youtube"],
+          tags: ["mined", location.hostname.replace(/^www\./, "")],
         });
       },
       onMarkKnown: (surface) => {

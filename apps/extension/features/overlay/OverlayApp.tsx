@@ -159,6 +159,8 @@ export function OverlayApp({
       <div
         ref={wrapRef}
         tabIndex={0}
+        role="group"
+        aria-label="Caption overlay, press question mark for keyboard shortcuts"
         style={{ pointerEvents: "auto", outline: "none" }}
         className="llm-focus-ring"
       >

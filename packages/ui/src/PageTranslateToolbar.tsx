@@ -1,6 +1,6 @@
 import type { CSSProperties, HTMLAttributes } from "react";
 import { Button } from "./Button.js";
-import { colors, fonts } from "./tokens.js";
+import { fonts } from "./tokens.js";
 
 export type PageTranslateMode = "original" | "translated" | "dual";
 
@@ -50,12 +50,12 @@ export function PageTranslateToolbar({
     flexDirection: "column",
     gap: "0.5rem",
     fontFamily: fonts.ui,
-    color: colors.ink,
-    background: `color-mix(in srgb, ${colors.paper} 94%, transparent)`,
-    border: `1px solid color-mix(in srgb, ${colors.mutedSlate} 40%, transparent)`,
+    color: "var(--llm-ink)",
+    background: `color-mix(in srgb, var(--llm-paper) 94%, transparent)`,
+    border: `1px solid color-mix(in srgb, var(--llm-muted-slate) 40%, transparent)`,
     borderRadius: 2,
     padding: "0.55rem 0.7rem",
-    boxShadow: `0 2px 12px color-mix(in srgb, ${colors.ink} 18%, transparent)`,
+    boxShadow: `0 2px 12px color-mix(in srgb, var(--llm-ink) 18%, transparent)`,
     maxWidth: "min(36rem, 96vw)",
     pointerEvents: "auto",
     ...style,
@@ -120,10 +120,10 @@ export function PageTranslateToolbar({
               fontFamily: fonts.ui,
               fontSize: "0.8125rem",
               padding: "0.3rem 0.4rem",
-              border: `1px solid ${colors.mutedSlate}`,
+              border: `1px solid var(--llm-muted-slate)`,
               borderRadius: 2,
-              background: colors.paper,
-              color: colors.ink,
+              background: "var(--llm-paper)",
+              color: "var(--llm-ink)",
             }}
           >
             {languages.map((l) => (
@@ -139,7 +139,7 @@ export function PageTranslateToolbar({
         <div
           style={{
             fontSize: "0.75rem",
-            color: colors.mutedSlate,
+            color: "var(--llm-muted-slate)",
             fontFamily: fonts.mono,
           }}
           aria-live="polite"
@@ -155,7 +155,7 @@ export function PageTranslateToolbar({
           role="alert"
           style={{
             fontSize: "0.8125rem",
-            color: colors.errorRed,
+            color: "var(--llm-error-red)",
             display: "flex",
             gap: "0.5rem",
             alignItems: "center",

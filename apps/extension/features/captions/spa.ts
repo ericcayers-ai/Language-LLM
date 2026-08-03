@@ -20,6 +20,10 @@ export function extractVideoId(href: string): string | null {
     if (u.hostname.includes("music.youtube.com")) {
       return u.searchParams.get("v");
     }
+    if (u.hostname.includes("netflix.com")) {
+      const watch = u.pathname.match(/^\/watch\/(\d+)/);
+      if (watch) return watch[1]!;
+    }
   } catch {
     return null;
   }

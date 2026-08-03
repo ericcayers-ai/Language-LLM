@@ -1,6 +1,6 @@
 import { useState, type HTMLAttributes } from "react";
 import { Button } from "./Button.js";
-import { colors, fonts } from "./tokens.js";
+import { fonts } from "./tokens.js";
 
 export interface ReviewCardProps extends HTMLAttributes<HTMLDivElement> {
   sourceText: string;
@@ -26,9 +26,9 @@ export function ReviewCard({
       className={className}
       style={{
         fontFamily: fonts.ui,
-        color: colors.ink,
-        background: colors.paper,
-        border: `1px solid color-mix(in srgb, ${colors.mutedSlate} 35%, transparent)`,
+        color: "var(--llm-ink)",
+        background: "var(--llm-paper)",
+        border: `1px solid color-mix(in srgb, var(--llm-muted-slate) 35%, transparent)`,
         borderRadius: 2,
         padding: "0.75rem",
         ...style,
@@ -44,7 +44,7 @@ export function ReviewCard({
             style={{
               margin: "0 0 0.75rem",
               fontSize: "0.875rem",
-              color: colors.mutedSlate,
+              color: "var(--llm-muted-slate)",
             }}
           >
             {translationText ?? "(no translation)"}

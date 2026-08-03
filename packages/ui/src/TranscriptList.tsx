@@ -1,5 +1,5 @@
 import { useMemo, useState, type HTMLAttributes, type KeyboardEvent } from "react";
-import { colors, fonts } from "./tokens.js";
+import { fonts } from "./tokens.js";
 
 export interface TranscriptItem {
   id: string;
@@ -65,8 +65,8 @@ export function TranscriptList({
         flexDirection: "column",
         gap: "0.5rem",
         fontFamily: fonts.ui,
-        color: colors.ink,
-        background: colors.paper,
+        color: "var(--llm-ink)",
+        background: "var(--llm-paper)",
         ...style,
       }}
       {...rest}
@@ -84,10 +84,10 @@ export function TranscriptList({
               fontFamily: fonts.ui,
               fontSize: "0.875rem",
               padding: "0.45rem 0.6rem",
-              border: `1px solid ${colors.mutedSlate}`,
+              border: `1px solid var(--llm-muted-slate)`,
               borderRadius: 2,
-              background: colors.paper,
-              color: colors.ink,
+              background: "var(--llm-paper)",
+              color: "var(--llm-ink)",
             }}
           />
         </label>
@@ -96,7 +96,7 @@ export function TranscriptList({
       {filtered.length === 0 ? (
         <p
           role="status"
-          style={{ margin: 0, fontSize: "0.875rem", color: colors.mutedSlate }}
+          style={{ margin: 0, fontSize: "0.875rem", color: "var(--llm-muted-slate)" }}
         >
           {items.length === 0 ? emptyLabel : "No cues match this search."}
         </p>
@@ -133,9 +133,9 @@ export function TranscriptList({
                   borderRadius: 2,
                   cursor: "pointer",
                   background: item.active
-                    ? `color-mix(in srgb, ${colors.signalBlue} 12%, ${colors.paper})`
+                    ? `color-mix(in srgb, var(--llm-signal-blue) 12%, var(--llm-paper))`
                     : "transparent",
-                  color: colors.ink,
+                  color: "var(--llm-ink)",
                 }}
               >
                 <span
@@ -143,8 +143,8 @@ export function TranscriptList({
                     fontFamily: fonts.mono,
                     fontSize: "0.75rem",
                     color: item.uncertain
-                      ? colors.amberEvidence
-                      : colors.mutedSlate,
+                      ? "var(--llm-amber-evidence)"
+                      : "var(--llm-muted-slate)",
                   }}
                 >
                   {formatTs(item.startMs)}
@@ -158,7 +158,7 @@ export function TranscriptList({
                       style={{
                         display: "block",
                         fontSize: "0.8125rem",
-                        color: colors.mutedSlate,
+                        color: "var(--llm-muted-slate)",
                         marginTop: 2,
                       }}
                     >
@@ -172,7 +172,7 @@ export function TranscriptList({
                         display: "block",
                         fontFamily: fonts.mono,
                         fontSize: "0.7rem",
-                        color: colors.mutedSlate,
+                        color: "var(--llm-muted-slate)",
                         marginTop: 2,
                       }}
                     >

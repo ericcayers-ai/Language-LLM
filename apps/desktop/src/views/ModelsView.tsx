@@ -26,10 +26,6 @@ export function ModelsView() {
     });
   }, []);
 
-  if (!status && models.length === 0) {
-    // still loading or empty catalog
-  }
-
   return (
     <div>
       <StatusRegion message={status} tone={tone} />

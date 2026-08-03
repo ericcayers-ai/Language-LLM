@@ -1,5 +1,5 @@
 import { useEffect, useRef, type HTMLAttributes } from "react";
-import { colors, fonts } from "./tokens.js";
+import { fonts } from "./tokens.js";
 
 export type StatusTone = "info" | "success" | "warn" | "error";
 
@@ -11,10 +11,10 @@ export interface StatusRegionProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 const toneColor: Record<StatusTone, string> = {
-  info: colors.mutedSlate,
-  success: colors.signalBlue,
-  warn: colors.amberEvidence,
-  error: colors.errorRed,
+  info: "var(--llm-muted-slate)",
+  success: "var(--llm-signal-blue)",
+  warn: "var(--llm-amber-evidence)",
+  error: "var(--llm-error-red)",
 };
 
 /**
@@ -54,7 +54,7 @@ export function StatusRegion({
           color: toneColor[tone],
           borderLeft: `3px solid ${toneColor[tone]}`,
           padding: "0.4rem 0.65rem",
-          background: `color-mix(in srgb, ${toneColor[tone]} 8%, ${colors.paper})`,
+          background: `color-mix(in srgb, ${toneColor[tone]} 8%, var(--llm-paper))`,
           ...style,
         }}
         {...rest}

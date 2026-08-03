@@ -54,7 +54,7 @@ export function OverviewView() {
             <div className="mono">{health.dataDir}</div>
           </dl>
         ) : (
-          <p className="meta">Loading…</p>
+          <p className="meta">{status ? "Unavailable" : "Loading…"}</p>
         )}
         <div className="row" style={{ marginTop: "0.75rem" }}>
           <Button

@@ -7,6 +7,7 @@ import {
   ProfilePicker,
   StatusRegion,
   useDensity,
+  type StatusTone,
 } from "@language-llm/ui";
 import "@language-llm/ui/tokens.css";
 import {
@@ -24,16 +25,20 @@ function PopupInner() {
   const { profile, setProfile } = useDensity();
   const [companion, setCompanion] = useState<CompanionUi>("unknown");
   const [pagePerm, setPagePerm] = useState(false);
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState<{ message: string; tone: StatusTone }>(
+    { message: "", tone: "info" },
+  );
   const [tabTitle, setTabTitle] = useState("");
   const [retention, setRetentionState] = useState<RetentionPreset>("days7");
 
   useEffect(() => {
-    void pingCompanion().then((ping) => {
-      if (ping.ready) setCompanion("ready");
-      else if (ping.degraded) setCompanion("degraded");
-      else setCompanion("down");
-    });
+    void pingCompanion()
+      .then((ping) => {
+        if (ping.ready) setCompanion("ready");
+        else if (ping.degraded) setCompanion("degraded");
+        else setCompanion("down");
+      })
+      .catch(() => setCompanion("down"));
     chrome.permissions.contains({ origins: [...PAGE_ORIGINS] }, (granted) => {
       setPagePerm(Boolean(granted));
     });
@@ -55,9 +60,12 @@ function PopupInner() {
       ).sidePanel;
       if (sidePanel?.open) {
         void sidePanel.open({ windowId: tab.windowId });
-        setStatus("Side panel opened");
+        setStatus({ message: "Side panel opened", tone: "success" });
       } else {
-        setStatus("Side panel API unavailable in this browser");
+        setStatus({
+          message: "Side panel API unavailable in this browser",
+          tone: "error",
+        });
       }
     });
   };
@@ -135,7 +143,7 @@ function PopupInner() {
               (granted) => {
                 setPagePerm(Boolean(granted));
                 if (!granted) {
-                  setStatus("Host permission denied");
+                  setStatus({ message: "Host permission denied", tone: "error" });
                   return;
                 }
                 chrome.tabs.query(
@@ -148,7 +156,7 @@ function PopupInner() {
                         targetLang: "en",
                       });
                     }
-                    setStatus("Page translate started");
+                    setStatus({ message: "Page translate started", tone: "success" });
                   },
                 );
               },
@@ -170,7 +178,7 @@ function PopupInner() {
                       new Event("language-llm:transcribe-tab"),
                     ),
                 });
-                setStatus("Tab transcription requested");
+                setStatus({ message: "Tab transcription requested", tone: "success" });
               }
             });
           }}
@@ -195,7 +203,11 @@ function PopupInner() {
                 { origins: [...PAGE_ORIGINS] },
                 (removed) => {
                   setPagePerm(!removed);
-                  setStatus(removed ? "Permission revoked" : "Still granted");
+                  setStatus(
+                    removed
+                      ? { message: "Permission revoked", tone: "success" }
+                      : { message: "Still granted", tone: "info" },
+                  );
                 },
               );
             }}
@@ -211,7 +223,9 @@ function PopupInner() {
                 (granted) => {
                   setPagePerm(Boolean(granted));
                   setStatus(
-                    granted ? "Host permission granted" : "Permission denied",
+                    granted
+                      ? { message: "Host permission granted", tone: "success" }
+                      : { message: "Permission denied", tone: "error" },
                   );
                 },
               );
@@ -235,8 +249,8 @@ function PopupInner() {
                 void setRetention(preset).then((res) => {
                   setStatus(
                     res.ok
-                      ? `Retention → ${preset}`
-                      : res.error ?? "Retention failed",
+                      ? { message: `Retention → ${preset}`, tone: "success" }
+                      : { message: res.error ?? "Retention failed", tone: "error" },
                   );
                 });
               }}
@@ -259,7 +273,9 @@ function PopupInner() {
               }
               void wipePrivacy("all").then((res) => {
                 setStatus(
-                  res.ok ? "Privacy wipe completed" : res.error ?? "Wipe failed",
+                  res.ok
+                    ? { message: "Privacy wipe completed", tone: "success" }
+                    : { message: res.error ?? "Wipe failed", tone: "error" },
                 );
               });
             }}
@@ -271,7 +287,9 @@ function PopupInner() {
 
       <ProfilePicker value={profile} onChange={setProfile} compact />
 
-      {status ? <StatusRegion message={status} tone="info" /> : null}
+      {status.message ? (
+        <StatusRegion message={status.message} tone={status.tone} />
+      ) : null}
 
       <p style={{ fontSize: 11, margin: 0, opacity: 0.65 }}>
         Reviews, dictionaries, and lyrics live in the side panel.

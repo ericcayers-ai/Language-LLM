@@ -62,7 +62,7 @@ export function StorageView() {
             </table>
           </>
         ) : (
-          <p className="meta">Loading…</p>
+          <p className="meta">{status ? "Unavailable" : "Loading…"}</p>
         )}
       </section>
 
@@ -102,6 +102,14 @@ export function StorageView() {
               key={scope}
               variant={scope === "all" ? "danger" : "ghost"}
               onClick={async () => {
+                if (
+                  scope === "all" &&
+                  !window.confirm(
+                    "Wipe all companion-stored data (transcripts, study, dictionaries)?",
+                  )
+                ) {
+                  return;
+                }
                 try {
                   const result = await api.wipePrivacy(scope);
                   setTone(scope === "all" ? "warn" : "success");

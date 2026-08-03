@@ -1,5 +1,5 @@
 import type { HTMLAttributes } from "react";
-import { colors, fonts } from "./tokens.js";
+import { fonts } from "./tokens.js";
 
 export interface EvidenceItem {
   id: string;
@@ -13,9 +13,9 @@ export interface EvidenceGutterProps extends HTMLAttributes<HTMLElement> {
 }
 
 const severityColor = {
-  info: colors.mutedSlate,
-  warn: colors.amberEvidence,
-  error: colors.errorRed,
+  info: "var(--llm-muted-slate)",
+  warn: "var(--llm-amber-evidence)",
+  error: "var(--llm-error-red)",
 } as const;
 
 export function EvidenceGutter({
@@ -37,8 +37,8 @@ export function EvidenceGutter({
         maxWidth: "14rem",
         fontFamily: fonts.mono,
         fontSize: "0.75rem",
-        color: colors.mutedSlate,
-        borderLeft: `2px solid ${colors.amberEvidence}`,
+        color: "var(--llm-muted-slate)",
+        borderLeft: `2px solid var(--llm-amber-evidence)`,
         paddingLeft: "0.5rem",
         ...style,
       }}
@@ -53,7 +53,7 @@ export function EvidenceGutter({
             <div key={item.id} style={{ color: severityColor[sev] }}>
               <div style={{ fontWeight: 600 }}>{item.label}</div>
               {item.detail ? (
-                <div style={{ color: colors.mutedSlate }}>{item.detail}</div>
+                <div style={{ color: "var(--llm-muted-slate)" }}>{item.detail}</div>
               ) : null}
             </div>
           );

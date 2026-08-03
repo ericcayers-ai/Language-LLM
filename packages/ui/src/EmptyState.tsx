@@ -1,6 +1,6 @@
 import type { CSSProperties, HTMLAttributes, ReactNode } from "react";
 import { Button } from "./Button.js";
-import { colors, fonts } from "./tokens.js";
+import { fonts } from "./tokens.js";
 
 export type EmptyStateKind =
   | "no-captions"
@@ -97,10 +97,10 @@ export function EmptyState({
   const copy = COPY[kind];
   const rootStyle: CSSProperties = {
     fontFamily: fonts.ui,
-    color: colors.ink,
-    background: colors.paper,
+    color: "var(--llm-ink)",
+    background: "var(--llm-paper)",
     padding: "1rem",
-    border: `1px solid color-mix(in srgb, ${colors.mutedSlate} 35%, transparent)`,
+    border: `1px solid color-mix(in srgb, var(--llm-muted-slate) 35%, transparent)`,
     borderRadius: 2,
     ...style,
   };
@@ -127,7 +127,7 @@ export function EmptyState({
         style={{
           margin: "0 0 0.75rem",
           fontSize: "0.875rem",
-          color: colors.mutedSlate,
+          color: "var(--llm-muted-slate)",
           lineHeight: 1.45,
         }}
       >

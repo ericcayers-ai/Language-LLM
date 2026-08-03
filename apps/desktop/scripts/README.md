@@ -20,7 +20,7 @@ cargo build -p language-llm-desktop --release
 
 # 2. Build / run extension
 pnpm --filter @language-llm/extension dev
-# chrome://extensions → Load unpacked → apps/extension/.output/chrome-mv3-dev
+# chrome://extensions → Load unpacked → apps/extension/.output/chrome-mv3
 # Copy the extension ID
 
 # 3. Register native host (pick your OS)

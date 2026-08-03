@@ -1,5 +1,5 @@
 import type { CSSProperties, HTMLAttributes, ReactNode } from "react";
-import { colors, fonts } from "./tokens.js";
+import { fonts } from "./tokens.js";
 
 export type CaptionProvenanceLabel =
   | "human"
@@ -91,8 +91,8 @@ export function CaptionOverlay({
     textAlign: "center",
     pointerEvents: "auto",
     fontFamily: fonts.script,
-    color: colors.paper,
-    textShadow: `0 1px 2px ${colors.ink}`,
+    color: "var(--llm-paper)",
+    textShadow: `0 1px 2px var(--llm-ink)`,
     opacity,
     ...style,
   };
@@ -100,7 +100,7 @@ export function CaptionOverlay({
   const cueStyle = (extra?: CSSProperties): CSSProperties => ({
     margin: "0.15rem 0",
     padding: "0.45rem 0.85rem",
-    background: `color-mix(in srgb, ${colors.ink} 78%, transparent)`,
+    background: `color-mix(in srgb, var(--llm-ink) 78%, transparent)`,
     fontSize: `calc(${1.15 * fontScale}rem * var(--llm-type-scale, 1))`,
     lineHeight: 1.35,
     borderRadius: 2,
@@ -133,7 +133,7 @@ export function CaptionOverlay({
             marginBottom: "0.25rem",
             fontFamily: fonts.mono,
             fontSize: "0.75rem",
-            color: uncertain ? colors.amberEvidence : colors.mutedSlate,
+            color: uncertain ? "var(--llm-amber-evidence)" : "var(--llm-muted-slate)",
           }}
         >
           {uncertain ? (
@@ -168,10 +168,10 @@ export function CaptionOverlay({
                 filter: blurTranslation ? "blur(6px)" : undefined,
                 userSelect: blurTranslation ? "none" : "text",
                 outline: karaokeActive
-                  ? `2px solid ${colors.signalBlue}`
+                  ? `2px solid var(--llm-signal-blue)`
                   : undefined,
-                color: uncertain ? colors.amberEvidence : colors.paper,
-                boxShadow: `0 1px 0 color-mix(in srgb, ${colors.signalBlue} 35%, transparent)`,
+                color: uncertain ? "var(--llm-amber-evidence)" : "var(--llm-paper)",
+                boxShadow: `0 1px 0 color-mix(in srgb, var(--llm-signal-blue) 35%, transparent)`,
               })}
             >
               {translationText}

@@ -5,7 +5,7 @@ import {
   profileLabel,
   type DensityProfile,
 } from "./density.js";
-import { colors, fonts } from "./tokens.js";
+import { fonts } from "./tokens.js";
 
 export interface ProfilePickerProps
   extends Omit<HTMLAttributes<HTMLFieldSetElement>, "onChange"> {
@@ -29,7 +29,7 @@ export function ProfilePicker({
     <fieldset
       className={className}
       style={{
-        border: `1px solid color-mix(in srgb, ${colors.mutedSlate} 35%, transparent)`,
+        border: `1px solid color-mix(in srgb, var(--llm-muted-slate) 35%, transparent)`,
         borderRadius: 2,
         padding: compact ? "0.45rem 0.55rem" : "0.65rem 0.75rem",
         margin: 0,
@@ -48,7 +48,7 @@ export function ProfilePicker({
         Density profile
       </legend>
       <div
-        role="radiogroup"
+        role="group"
         aria-label="Density profile"
         style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}
       >
@@ -73,7 +73,7 @@ export function ProfilePicker({
           style={{
             margin: "0.5rem 0 0",
             fontSize: "0.75rem",
-            color: colors.mutedSlate,
+            color: "var(--llm-muted-slate)",
           }}
         >
           {profileDescription(value)}

@@ -60,7 +60,7 @@ export function UpdatesView() {
             </Button>
           </>
         ) : (
-          <p className="meta">Loading…</p>
+          <p className="meta">{status ? "Unavailable" : "Loading…"}</p>
         )}
       </section>
     </div>

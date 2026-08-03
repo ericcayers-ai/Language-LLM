@@ -55,7 +55,7 @@ export function HardwareView() {
             </div>
           </>
         ) : (
-          <p className="meta">Probing…</p>
+          <p className="meta">{status ? "Unavailable" : "Probing…"}</p>
         )}
       </section>
 

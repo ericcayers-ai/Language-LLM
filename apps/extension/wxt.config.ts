@@ -1,6 +1,6 @@
 import { defineConfig } from "wxt";
 
-// Least-privilege MV3: YouTube match patterns by default;
+// Least-privilege MV3: YouTube + Netflix match patterns by default;
 // page-translate uses activeTab / optional_host_permissions.
 export default defineConfig({
   modules: [],
@@ -23,6 +23,7 @@ export default defineConfig({
       "*://youtube.com/*",
       "*://music.youtube.com/*",
       "*://m.youtube.com/*",
+      "*://www.netflix.com/*",
     ],
     action: {
       default_title: "Language-LLM",

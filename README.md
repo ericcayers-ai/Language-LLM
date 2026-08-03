@@ -40,18 +40,26 @@ Application source is MIT ([LICENSE](./LICENSE)). Model weights and dictionaries
 ## Prerequisites
 
 - Node.js ≥ 20
-- pnpm 9 (`corepack enable && corepack prepare pnpm@9.15.0 --activate`)
-- Rust stable (`rustup`)
+- Rust stable (`rustup`) — optional; needed for the desktop companion, skippable if you only want the extension
 
-## Setup
+pnpm itself is not a separate install: `pnpm setup` below activates the pinned version via corepack.
+
+## Quickstart
 
 ```bash
-corepack enable
-pnpm install
-pnpm verify          # JS tests + typecheck + cargo test --workspace (see scripts/verify.mjs)
+pnpm setup    # installs deps, activates pinned pnpm, builds the companion if Rust is present
+pnpm dev      # runs the companion (loopback WS) + extension watch build together
 ```
 
-## How to run
+Then in Chrome: `chrome://extensions` → enable **Developer mode** → **Load unpacked** → pick `apps/extension/.output/chrome-mv3`.
+
+That's it for local dev. `pnpm setup` prints the same next-steps if you lose this page. Native messaging (for auto-discovering the companion instead of pasting a port) is optional — see [step 3](#3-native-messaging-extension-bootstrap) below.
+
+For full quality gates (lint, typecheck, cargo test, e2e) run `pnpm verify` instead of `pnpm dev`.
+
+## Manual / step-by-step run
+
+The commands below are what `pnpm dev` runs for you. Use them directly if you want to run a single piece, run headless, or debug a step in isolation.
 
 ### 1. Companion — headless (CI / extension without window)
 
@@ -105,7 +113,7 @@ Data removal / wipe: [docs/privacy.md](./docs/privacy.md) and [docs/troubleshoot
 
 ```bash
 pnpm --filter @language-llm/extension dev
-# Load apps/extension/.output/chrome-mv3-dev in chrome://extensions
+# Load apps/extension/.output/chrome-mv3 in chrome://extensions
 ```
 
 Surfaces: popup (launcher), YouTube overlay, side panel, page-translate toolbar. Density profiles **Focus / Balanced / Expert** via `@language-llm/ui` (`ProfilePicker`).

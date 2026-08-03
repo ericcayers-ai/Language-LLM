@@ -41,3 +41,14 @@ coverage/
 *.log
 npm-debug.log*
 pnpm-debug.log*
+
+# Agent tooling / local scratch (not part of the shipped product)
+.graphify/
+.claude/
+.agents/
+.tmp-shots/
+.graphify_hook_installed
+.graphify_claude_hook_installed
+skills-lock.json
+shot.mjs
+shot_ext.mjs

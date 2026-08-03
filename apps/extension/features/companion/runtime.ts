@@ -64,10 +64,22 @@ export function interpretCompanionPing(
   };
 }
 
+/** Upper bound on a companion.ping round trip so the UI never hangs
+ *  indefinitely if the background worker or native host never responds. */
+const PING_TIMEOUT_MS = 10_000;
+
 export async function pingCompanion(
   send: RuntimeSend = defaultSend,
 ): Promise<CompanionPingResult> {
-  const res = await send({ type: "companion.ping" });
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<Record<string, unknown>>((resolve) => {
+    timer = setTimeout(
+      () => resolve({ ok: false, error: "Companion ping timed out" }),
+      PING_TIMEOUT_MS,
+    );
+  });
+  const res = await Promise.race([send({ type: "companion.ping" }), timeout]);
+  clearTimeout(timer!);
   return interpretCompanionPing(res);
 }
 

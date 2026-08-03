@@ -1,5 +1,5 @@
 import type { CSSProperties, HTMLAttributes, ReactNode } from "react";
-import { colors, fonts } from "./tokens.js";
+import { fonts } from "./tokens.js";
 
 export interface ContextRibbonItem {
   id: string;
@@ -32,11 +32,11 @@ export function ContextRibbon({
         gridTemplateColumns: evidenceSlot ? "1fr auto" : "1fr",
         gap: "0.75rem",
         alignItems: "center",
-        background: colors.paper,
-        color: colors.ink,
+        background: "var(--llm-paper)",
+        color: "var(--llm-ink)",
         fontFamily: fonts.ui,
         padding: "0.5rem 0.75rem",
-        borderBottom: `1px solid color-mix(in srgb, ${colors.mutedSlate} 35%, transparent)`,
+        borderBottom: `1px solid color-mix(in srgb, var(--llm-muted-slate) 35%, transparent)`,
         ...style,
       }}
       {...rest}
@@ -57,7 +57,7 @@ export function ContextRibbon({
           const itemStyle: CSSProperties = {
             opacity,
             fontWeight: item.active ? 700 : 500,
-            color: item.active ? colors.ink : colors.mutedSlate,
+            color: item.active ? "var(--llm-ink)" : "var(--llm-muted-slate)",
             whiteSpace: "nowrap",
             maxWidth: item.active ? "28rem" : "10rem",
             overflow: "hidden",
@@ -72,7 +72,7 @@ export function ContextRibbon({
                     marginLeft: "0.35rem",
                     fontFamily: fonts.mono,
                     fontSize: "0.75rem",
-                    color: colors.amberEvidence,
+                    color: "var(--llm-amber-evidence)",
                   }}
                   aria-label={`Confidence ${Math.round(item.confidence * 100)} percent`}
                 >

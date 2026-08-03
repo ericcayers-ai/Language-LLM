@@ -8,12 +8,13 @@ Participate under [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md). Security issues: [
 
 ## Prerequisites
 
-- Node.js ≥ 20, pnpm 9 (`corepack enable`)
-- Rust stable via `rustup`
+- Node.js ≥ 20
+- Rust stable via `rustup` (optional — needed for the desktop companion)
 
 ```bash
-pnpm install
-pnpm verify   # required green path — see scripts/verify.mjs
+pnpm setup    # installs deps, activates pinned pnpm, builds the companion if Rust is present
+pnpm dev      # companion + extension watch build, for local iteration
+pnpm verify   # required green path before a PR — see scripts/verify.mjs
 ```
 
 ## Default branch

@@ -1,5 +1,5 @@
 import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from "react";
-import { colors, fonts } from "./tokens.js";
+import { fonts } from "./tokens.js";
 
 export type ButtonVariant = "primary" | "ghost" | "danger";
 
@@ -10,19 +10,19 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles: Record<ButtonVariant, CSSProperties> = {
   primary: {
-    background: colors.signalBlue,
-    color: colors.paper,
-    border: `1px solid ${colors.signalBlue}`,
+    background: "var(--llm-signal-blue)",
+    color: "var(--llm-paper)",
+    border: "1px solid var(--llm-signal-blue)",
   },
   ghost: {
     background: "transparent",
-    color: colors.ink,
-    border: `1px solid ${colors.mutedSlate}`,
+    color: "var(--llm-ink)",
+    border: "1px solid var(--llm-muted-slate)",
   },
   danger: {
-    background: colors.errorRed,
-    color: colors.paper,
-    border: `1px solid ${colors.errorRed}`,
+    background: "var(--llm-error-red)",
+    color: "var(--llm-paper)",
+    border: "1px solid var(--llm-error-red)",
   },
 };
 

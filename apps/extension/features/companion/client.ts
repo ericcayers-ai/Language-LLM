@@ -89,19 +89,61 @@ function backoffMs(attempt: number): number {
 }
 
 /**
+ * Persistent native-messaging port. `sendNativeMessage` is one-shot: Chrome
+ * spawns the host, delivers a single reply, then disconnects — which kills
+ * the host process (and the loopback WebSocket server it just bound) before
+ * the extension can open a WS connection. `connectNative` keeps the host
+ * process alive for the port's lifetime, matching the native host's
+ * persistent read loop.
+ */
+let nativePort: chrome.runtime.Port | null = null;
+
+function getNativePort(): chrome.runtime.Port {
+  if (nativePort) return nativePort;
+  const port = chrome.runtime.connectNative(NATIVE_HOST_NAME);
+  port.onDisconnect.addListener(() => {
+    if (nativePort === port) nativePort = null;
+  });
+  nativePort = port;
+  return port;
+}
+
+/**
  * Native-messaging bootstrap: discover loopback port + short-lived token.
  */
 export async function nativeBootstrap(): Promise<BootstrapInfo> {
-  const res = (await chrome.runtime.sendNativeMessage(NATIVE_HOST_NAME, {
-    type: "bootstrap",
-  })) as BootstrapInfo;
-  if (!res?.ok || !res.port || !res.bootstrapToken) {
-    const err = (res as unknown as { error?: string })?.error;
-    throw new Error(
-      typeof err === "string" ? err : "companion bootstrap failed",
-    );
-  }
-  return res;
+  const port = getNativePort();
+  return new Promise<BootstrapInfo>((resolve, reject) => {
+    const onMessage = (msg: unknown) => {
+      cleanup();
+      const res = msg as BootstrapInfo;
+      if (!res?.ok || !res.port || !res.bootstrapToken) {
+        const err = (res as unknown as { error?: string })?.error;
+        reject(
+          new Error(
+            typeof err === "string" ? err : "companion bootstrap failed",
+          ),
+        );
+        return;
+      }
+      resolve(res);
+    };
+    const onDisconnect = () => {
+      cleanup();
+      reject(
+        new Error(
+          chrome.runtime.lastError?.message ?? "native port disconnected",
+        ),
+      );
+    };
+    const cleanup = () => {
+      port.onMessage.removeListener(onMessage);
+      port.onDisconnect.removeListener(onDisconnect);
+    };
+    port.onMessage.addListener(onMessage);
+    port.onDisconnect.addListener(onDisconnect);
+    port.postMessage({ type: "bootstrap" });
+  });
 }
 
 /**
