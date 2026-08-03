@@ -1,6 +1,6 @@
 # Implementation status
 
-Living checklist for the monorepo. Updated **2026-07-17** (v0.1.0 re-release gap audit).
+Living checklist for the monorepo. Updated **2026-08-03** (native-messaging port fix, Netflix support, DX scripts).
 
 **Default git branch:** **`main`**.
 
@@ -100,7 +100,7 @@ These remain after software-side overhaul work. Do **not** close them by weakeni
 | Phase 0 docs (ADRs, threat model, licenses, tiers, fidelity, source policy) | Docs |
 | Monorepo (pnpm + Cargo), `@language-llm/protocol` TS+Rust | |
 | Shared UI tokens/primitives + Focus/Balanced/Expert density | Extension + desktop |
-| Caption-first YouTube path (router, fixtures, SPA helpers, overlay, MAIN bridge parsers) | Live YT still **Manually verified** empty |
+| Caption-first YouTube + Netflix path (router, fixtures, SPA helpers, overlay, MAIN bridge parsers) | Live YT/Netflix still **Manually verified** empty |
 | Page-translate segmenter/apply/restore + toolbar + host permission UX | Companion MT when connected; real llama when weights verified |
 | Lyrics LRC/TTML / LRCLIB opt-in / karaoke helpers / priority excludes scrapers | |
 | Dictionary adapters (JMdict / CC-CEDICT / Kaikki) + import/lookup paths | Attribution display required in UI About |

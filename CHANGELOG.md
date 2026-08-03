@@ -8,9 +8,23 @@ Until then, entries track monorepo overhaul milestones. **Do not** read pre-1.0 
 
 ## [Unreleased]
 
+### Added
+
+- Netflix caption/mining support (content-script match patterns, video ID extraction)
+- `pnpm setup` / `pnpm dev`: one-command fresh-machine setup and local dev loop (companion + extension watch)
+
 ### Fixed
 
--
+- Native-messaging bootstrap used one-shot `sendNativeMessage`, which disconnects the host (and its loopback WS server) right after the reply — companion connections could fail depending on timing. Switched to a persistent `connectNative` port.
+- `pingCompanion` had no timeout; a hung background worker or native host could leave the popup/side panel stuck on "unknown" indefinitely. Added a 10s race timeout.
+- Popup/side panel status messages always rendered with `tone="info"` regardless of success/error; async init paths (companion ping, retention, dictionary stats, study hydrate) could throw uncaught and leave the panel stuck loading.
+- Desktop views (Overview/Storage/Hardware/Updates) showed "Loading…"/"Probing…" forever on companion error instead of an "Unavailable" state.
+- `packages/ui` `Button.tsx` imported an unused `colors` token and used raw hex values instead of the CSS custom properties the rest of the design system uses.
+
+### Changed
+
+- Storage view now confirms before wiping all companion-stored data.
+- Caption overlay group has an `aria-label` hint for the keyboard-shortcuts affordance.
 
 ## [0.1.0] — 2026-07-17
 
