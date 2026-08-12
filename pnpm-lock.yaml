@@ -52,7 +52,7 @@ importers:
         version: 18.3.7(@types/react@18.3.31)
       '@vitejs/plugin-react':
         specifier: ^4.3.4
-        version: 4.7.0(vite@6.4.3(@types/node@26.1.1)(jiti@2.7.0))
+        version: 4.7.0(vite@6.4.3(@types/node@26.2.0)(jiti@2.7.0))
       jsdom:
         specifier: ^26.0.0
         version: 26.1.0
@@ -61,10 +61,10 @@ importers:
         version: 5.9.3
       vite:
         specifier: ^6.0.7
-        version: 6.4.3(@types/node@26.1.1)(jiti@2.7.0)
+        version: 6.4.3(@types/node@26.2.0)(jiti@2.7.0)
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@26.1.1)(happy-dom@20.10.6)(jsdom@26.1.0)
+        version: 2.1.9(@types/node@26.2.0)(happy-dom@20.11.2)(jsdom@26.1.0)
 
   apps/extension:
     dependencies:
@@ -110,10 +110,10 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@26.1.1)(happy-dom@20.10.6)(jsdom@26.1.0)
+        version: 2.1.9(@types/node@26.2.0)(happy-dom@20.11.2)(jsdom@26.1.0)
       wxt:
         specifier: ^0.19.22
-        version: 0.19.29(@types/node@26.1.1)(rollup@4.62.2)
+        version: 0.19.29(@types/node@26.2.0)(rollup@4.62.2)
 
   apps/extension/e2e:
     devDependencies:
@@ -138,7 +138,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@26.1.1)(happy-dom@20.10.6)(jsdom@26.1.0)
+        version: 2.1.9(@types/node@26.2.0)(happy-dom@20.11.2)(jsdom@26.1.0)
 
   packages/language-kits:
     devDependencies:
@@ -147,7 +147,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@26.1.1)(happy-dom@20.10.6)(jsdom@26.1.0)
+        version: 2.1.9(@types/node@26.2.0)(happy-dom@20.11.2)(jsdom@26.1.0)
 
   packages/learning:
     dependencies:
@@ -160,7 +160,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@26.1.1)(happy-dom@20.10.6)(jsdom@26.1.0)
+        version: 2.1.9(@types/node@26.2.0)(happy-dom@20.11.2)(jsdom@26.1.0)
 
   packages/lyrics:
     dependencies:
@@ -173,7 +173,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@26.1.1)(happy-dom@20.10.6)(jsdom@26.1.0)
+        version: 2.1.9(@types/node@26.2.0)(happy-dom@20.11.2)(jsdom@26.1.0)
 
   packages/mt-core:
     dependencies:
@@ -186,7 +186,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@26.1.1)(happy-dom@20.10.6)(jsdom@26.1.0)
+        version: 2.1.9(@types/node@26.2.0)(happy-dom@20.11.2)(jsdom@26.1.0)
 
   packages/page-translate:
     dependencies:
@@ -195,14 +195,14 @@ importers:
         version: link:../protocol
     devDependencies:
       happy-dom:
-        specifier: ^20.10.6
-        version: 20.10.6
+        specifier: ^20.11.2
+        version: 20.11.2
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@26.1.1)(happy-dom@20.10.6)(jsdom@26.1.0)
+        version: 2.1.9(@types/node@26.2.0)(happy-dom@20.11.2)(jsdom@26.1.0)
 
   packages/protocol:
     dependencies:
@@ -215,7 +215,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@26.1.1)(happy-dom@20.10.6)(jsdom@26.1.0)
+        version: 2.1.9(@types/node@26.2.0)(happy-dom@20.11.2)(jsdom@26.1.0)
 
   packages/ui:
     devDependencies:
@@ -248,10 +248,10 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@26.1.1)(happy-dom@20.10.6)(jsdom@26.1.0)
+        version: 2.1.9(@types/node@26.2.0)(happy-dom@20.11.2)(jsdom@26.1.0)
       vitest-axe:
         specifier: ^0.1.0
-        version: 0.1.0(vitest@2.1.9(@types/node@26.1.1)(happy-dom@20.10.6)(jsdom@26.1.0))
+        version: 0.1.0(vitest@2.1.9(@types/node@26.2.0)(happy-dom@20.11.2)(jsdom@26.1.0))
 
 packages:
 
@@ -347,6 +347,10 @@ packages:
 
   '@babel/runtime@7.28.2':
     resolution: {integrity: sha512-KHp2IflsnGywDjBWDkR9iEqiWSpc8GIi0lgTT3mOElT0PP1tG26P4tmFI2YvAdzgq9RGyoHZQEIEdZy6Ec5xCA==}
+    engines: {node: '>=6.9.0'}
+
+  '@babel/runtime@7.29.7':
+    resolution: {integrity: sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw==}
     engines: {node: '>=6.9.0'}
 
   '@babel/template@7.29.7':
@@ -1023,8 +1027,8 @@ packages:
   '@types/minimatch@3.0.5':
     resolution: {integrity: sha512-Klz949h02Gz2uZCMGwDUSDS1YBlTdDDgbWHi+81l29tQALUtvz4rAYi5uoVhE5Lagoq6DeqAUlbrHvW/mXDgdQ==}
 
-  '@types/node@26.1.1':
-    resolution: {integrity: sha512-nxAkRSVkN1Y0JC1W8ky/fTfkGsMmcrRsbx+3XoZE+rMOX71kLYTV7fLXpqud1GpbpP5TuffXFqfX7fH2GgZREw==}
+  '@types/node@26.2.0':
+    resolution: {integrity: sha512-5IviulTZeRNp2vAJ514cc/HUlY5nZ9fCbq9DMyC52BrhFZACo3nI0R7qBxhQmo/d27NFe96ur/b7Wwxklda+kg==}
 
   '@types/prop-types@15.7.15':
     resolution: {integrity: sha512-F6bEyamV9jKGAFBEmlQnesRPGOQqS2+Uwi0Em15xenOxHaf2hv6L8YCVn3rPdPJOiJfPiCnLIRyvwVaqMY3MIw==}
@@ -1680,8 +1684,8 @@ packages:
   growly@1.3.0:
     resolution: {integrity: sha512-+xGQY0YyAWCnqy7Cd++hc2JqMYzlm0dG30Jd0beaA64sROr8C4nt8Yc9V5Ro3avlSUDTN0ulqP/VBKi1/lLygw==}
 
-  happy-dom@20.10.6:
-    resolution: {integrity: sha512-6QD0ilzDDt93tX44y8tbmZdAcdTRYDhUP+Asgi6pC8Pp5IA3cvaZGyoVN/EGtlq9ziT65iPuBBn3ASLr6hCgVw==}
+  happy-dom@20.11.2:
+    resolution: {integrity: sha512-7MB+bJLkxu3SowAfBJbjW+c55kNz5tkR45gu2qzrxznezhLeN5YIlJbwUgSzlGc+qWoZ8Ykg71H5ezz69xixrw==}
     engines: {node: '>=20.0.0'}
 
   hookable@5.5.3:
@@ -2794,6 +2798,18 @@ packages:
       utf-8-validate:
         optional: true
 
+  ws@8.21.3:
+    resolution: {integrity: sha512-201TZ/kPWxoPr/OKWjquZR1SWKXcvxdH+e1xrx89b3YbmzLMFCLfnaG1HFIgWzJOEWZ7MvpK++odZufgYR50Rw==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
+
   wsl-utils@0.1.0:
     resolution: {integrity: sha512-h3Fbisa2nKGPxCpm89Hk33lBLsnaGBvctQopaBSOW/uIs6FTe1ATyAnKFJrzVs9vpGdsTe73WF3V4lIsk4Gacw==}
     engines: {node: '>=18'}
@@ -2961,6 +2977,8 @@ snapshots:
       '@babel/helper-plugin-utils': 7.29.7
 
   '@babel/runtime@7.28.2': {}
+
+  '@babel/runtime@7.29.7': {}
 
   '@babel/template@7.29.7':
     dependencies:
@@ -3368,7 +3386,7 @@ snapshots:
   '@testing-library/dom@10.4.1':
     dependencies:
       '@babel/code-frame': 7.29.7
-      '@babel/runtime': 7.28.2
+      '@babel/runtime': 7.29.7
       '@types/aria-query': 5.0.4
       aria-query: 5.3.0
       dom-accessibility-api: 0.5.16
@@ -3440,7 +3458,7 @@ snapshots:
 
   '@types/minimatch@3.0.5': {}
 
-  '@types/node@26.1.1':
+  '@types/node@26.2.0':
     dependencies:
       undici-types: 8.3.0
 
@@ -3461,9 +3479,9 @@ snapshots:
 
   '@types/ws@8.18.1':
     dependencies:
-      '@types/node': 26.1.1
+      '@types/node': 26.2.0
 
-  '@vitejs/plugin-react@4.7.0(vite@6.4.3(@types/node@26.1.1)(jiti@2.7.0))':
+  '@vitejs/plugin-react@4.7.0(vite@6.4.3(@types/node@26.2.0)(jiti@2.7.0))':
     dependencies:
       '@babel/core': 7.29.7
       '@babel/plugin-transform-react-jsx-self': 7.29.7(@babel/core@7.29.7)
@@ -3471,7 +3489,7 @@ snapshots:
       '@rolldown/pluginutils': 1.0.0-beta.27
       '@types/babel__core': 7.20.5
       react-refresh: 0.17.0
-      vite: 6.4.3(@types/node@26.1.1)(jiti@2.7.0)
+      vite: 6.4.3(@types/node@26.2.0)(jiti@2.7.0)
     transitivePeerDependencies:
       - supports-color
 
@@ -3482,13 +3500,13 @@ snapshots:
       chai: 5.3.3
       tinyrainbow: 1.2.0
 
-  '@vitest/mocker@2.1.9(vite@5.4.21(@types/node@26.1.1))':
+  '@vitest/mocker@2.1.9(vite@5.4.21(@types/node@26.2.0))':
     dependencies:
       '@vitest/spy': 2.1.9
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 5.4.21(@types/node@26.1.1)
+      vite: 5.4.21(@types/node@26.2.0)
 
   '@vitest/pretty-format@2.1.9':
     dependencies:
@@ -3636,7 +3654,7 @@ snapshots:
 
   buffer-image-size@0.6.4:
     dependencies:
-      '@types/node': 26.1.1
+      '@types/node': 26.2.0
 
   bundle-name@4.1.0:
     dependencies:
@@ -3689,7 +3707,7 @@ snapshots:
 
   chrome-launcher@1.2.0:
     dependencies:
-      '@types/node': 26.1.1
+      '@types/node': 26.2.0
       escape-string-regexp: 4.0.0
       is-wsl: 2.2.0
       lighthouse-logger: 2.0.2
@@ -4095,15 +4113,15 @@ snapshots:
 
   growly@1.3.0: {}
 
-  happy-dom@20.10.6:
+  happy-dom@20.11.2:
     dependencies:
-      '@types/node': 26.1.1
+      '@types/node': 26.2.0
       '@types/whatwg-mimetype': 3.0.2
       '@types/ws': 8.18.1
       buffer-image-size: 0.6.4
       entities: 7.0.1
       whatwg-mimetype: 3.0.0
-      ws: 8.21.1
+      ws: 8.21.3
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -5011,13 +5029,13 @@ snapshots:
 
   uuid@8.3.2: {}
 
-  vite-node@2.1.9(@types/node@26.1.1):
+  vite-node@2.1.9(@types/node@26.2.0):
     dependencies:
       cac: 6.7.14
       debug: 4.4.3
       es-module-lexer: 1.7.0
       pathe: 1.1.2
-      vite: 5.4.21(@types/node@26.1.1)
+      vite: 5.4.21(@types/node@26.2.0)
     transitivePeerDependencies:
       - '@types/node'
       - less
@@ -5029,13 +5047,13 @@ snapshots:
       - supports-color
       - terser
 
-  vite-node@3.2.4(@types/node@26.1.1)(jiti@2.7.0):
+  vite-node@3.2.4(@types/node@26.2.0)(jiti@2.7.0):
     dependencies:
       cac: 6.7.14
       debug: 4.4.3
       es-module-lexer: 1.7.0
       pathe: 2.0.3
-      vite: 6.4.3(@types/node@26.1.1)(jiti@2.7.0)
+      vite: 6.4.3(@types/node@26.2.0)(jiti@2.7.0)
     transitivePeerDependencies:
       - '@types/node'
       - jiti
@@ -5050,16 +5068,16 @@ snapshots:
       - tsx
       - yaml
 
-  vite@5.4.21(@types/node@26.1.1):
+  vite@5.4.21(@types/node@26.2.0):
     dependencies:
       esbuild: 0.21.5
       postcss: 8.5.19
       rollup: 4.62.2
     optionalDependencies:
-      '@types/node': 26.1.1
+      '@types/node': 26.2.0
       fsevents: 2.3.3
 
-  vite@6.4.3(@types/node@26.1.1)(jiti@2.7.0):
+  vite@6.4.3(@types/node@26.2.0)(jiti@2.7.0):
     dependencies:
       esbuild: 0.25.12
       fdir: 6.5.0(picomatch@4.0.5)
@@ -5068,11 +5086,11 @@ snapshots:
       rollup: 4.62.2
       tinyglobby: 0.2.17
     optionalDependencies:
-      '@types/node': 26.1.1
+      '@types/node': 26.2.0
       fsevents: 2.3.3
       jiti: 2.7.0
 
-  vitest-axe@0.1.0(vitest@2.1.9(@types/node@26.1.1)(happy-dom@20.10.6)(jsdom@26.1.0)):
+  vitest-axe@0.1.0(vitest@2.1.9(@types/node@26.2.0)(happy-dom@20.11.2)(jsdom@26.1.0)):
     dependencies:
       aria-query: 5.3.2
       axe-core: 4.12.1
@@ -5080,12 +5098,12 @@ snapshots:
       dom-accessibility-api: 0.5.16
       lodash-es: 4.18.1
       redent: 3.0.0
-      vitest: 2.1.9(@types/node@26.1.1)(happy-dom@20.10.6)(jsdom@26.1.0)
+      vitest: 2.1.9(@types/node@26.2.0)(happy-dom@20.11.2)(jsdom@26.1.0)
 
-  vitest@2.1.9(@types/node@26.1.1)(happy-dom@20.10.6)(jsdom@26.1.0):
+  vitest@2.1.9(@types/node@26.2.0)(happy-dom@20.11.2)(jsdom@26.1.0):
     dependencies:
       '@vitest/expect': 2.1.9
-      '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@26.1.1))
+      '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@26.2.0))
       '@vitest/pretty-format': 2.1.9
       '@vitest/runner': 2.1.9
       '@vitest/snapshot': 2.1.9
@@ -5101,12 +5119,12 @@ snapshots:
       tinyexec: 0.3.2
       tinypool: 1.1.1
       tinyrainbow: 1.2.0
-      vite: 5.4.21(@types/node@26.1.1)
-      vite-node: 2.1.9(@types/node@26.1.1)
+      vite: 5.4.21(@types/node@26.2.0)
+      vite-node: 2.1.9(@types/node@26.2.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
-      '@types/node': 26.1.1
-      happy-dom: 20.10.6
+      '@types/node': 26.2.0
+      happy-dom: 20.11.2
       jsdom: 26.1.0
     transitivePeerDependencies:
       - less
@@ -5210,11 +5228,13 @@ snapshots:
 
   ws@8.21.1: {}
 
+  ws@8.21.3: {}
+
   wsl-utils@0.1.0:
     dependencies:
       is-wsl: 3.1.1
 
-  wxt@0.19.29(@types/node@26.1.1)(rollup@4.62.2):
+  wxt@0.19.29(@types/node@26.2.0)(rollup@4.62.2):
     dependencies:
       '@1natsu/wait-element': 4.2.0
       '@aklinker1/rollup-plugin-visualizer': 5.12.0(rollup@4.62.2)
@@ -5260,8 +5280,8 @@ snapshots:
       publish-browser-extension: 3.0.3
       scule: 1.3.0
       unimport: 3.14.6(rollup@4.62.2)
-      vite: 6.4.3(@types/node@26.1.1)(jiti@2.7.0)
-      vite-node: 3.2.4(@types/node@26.1.1)(jiti@2.7.0)
+      vite: 6.4.3(@types/node@26.2.0)(jiti@2.7.0)
+      vite-node: 3.2.4(@types/node@26.2.0)(jiti@2.7.0)
       web-ext-run: 0.2.4
       webextension-polyfill: 0.12.0
     transitivePeerDependencies:
