@@ -12,6 +12,7 @@ Clipboard paste and OCR capture both feed the exact same lookup/card pipeline as
 
 - Dictionary lookup, MinedItem pipeline (Phase 0/1) — the terminal path for both clipboard and OCR output is identical to webpage mining.
 - VLM gate already used for MT ambiguity resolution — same visual-model infra backs OCR text extraction, no new vision model integration.
+- Phase 1's TTS fallback (voice sidecar) — like Phase 4, clipboard/OCR/PDF sources have no native audio, so Audio Word/Audio Sentence cards mined here are TTS-synthesized by construction via the same sidecar, no separate wiring needed.
 
 ## Components
 

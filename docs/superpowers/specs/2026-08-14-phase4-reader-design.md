@@ -14,6 +14,7 @@ Import epub/html/txt/rtf/subtitle files into a reader view where lookup and mini
 - Dictionary lookup, furigana/pinyin annotators (unchanged, reader is a new consumer).
 - Card Creator from Phase 1 (reader mining opens the same Card Creator UI with `source.kind = 'book'`).
 - Phase 3's comprehension-score logic, applied to book content instead of video/page content.
+- Phase 1's TTS fallback (voice sidecar) — books have no native audio at all, so every Audio Word/Audio Sentence card mined from the reader is TTS-synthesized by construction, not an edge case. This is the primary case Phase 1's fallback path was designed for, not a bolt-on for Phase 4.
 
 ## Components (new)
 
