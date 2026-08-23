@@ -180,6 +180,17 @@ pub struct StudyRecord {
     pub kind: String,
     pub payload_json: String,
     pub updated_at_ms: i64,
+    /// Optional clip window anchored to the source cue (ms).
+    pub video_clip_start_ms: Option<i64>,
+    pub video_clip_end_ms: Option<i64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WordStatusRow {
+    pub surface: String,
+    pub status: String,
+    pub encounters: i64,
+    pub updated_at_ms: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -282,6 +293,18 @@ CREATE TABLE IF NOT EXISTS prefs (
 );
 "#;
 
+const MIGRATION_V3: &str = r#"
+ALTER TABLE study_data ADD COLUMN video_clip_start_ms INTEGER;
+ALTER TABLE study_data ADD COLUMN video_clip_end_ms INTEGER;
+CREATE TABLE IF NOT EXISTS word_status (
+  surface TEXT PRIMARY KEY NOT NULL,
+  status TEXT NOT NULL,
+  encounters INTEGER NOT NULL DEFAULT 0,
+  updated_at_ms INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_word_status_status ON word_status(status);
+"#;
+
 /// SQLite-backed local store with schema migrations.
 pub struct SqliteStore {
     conn: Connection,
@@ -336,6 +359,14 @@ impl SqliteStore {
             let now = now_ms();
             self.conn.execute(
                 "INSERT INTO schema_migrations (version, applied_at_ms) VALUES (2, ?1)",
+                params![now],
+            )?;
+        }
+        if current < 3 {
+            self.conn.execute_batch(MIGRATION_V3)?;
+            let now = now_ms();
+            self.conn.execute(
+                "INSERT INTO schema_migrations (version, applied_at_ms) VALUES (3, ?1)",
                 params![now],
             )?;
         }
@@ -507,16 +538,97 @@ impl SqliteStore {
         Ok(row)
     }
 
-    pub fn put_study(&self, id: &str, kind: &str, payload_json: &str) -> Result<(), StoreError> {
+    pub fn put_study(
+        &self,
+        id: &str,
+        kind: &str,
+        payload_json: &str,
+        video_clip_start_ms: Option<i64>,
+        video_clip_end_ms: Option<i64>,
+    ) -> Result<(), StoreError> {
         self.conn.execute(
-            "INSERT INTO study_data (id, kind, payload_json, updated_at_ms)
-             VALUES (?1,?2,?3,?4)
+            "INSERT INTO study_data
+                (id, kind, payload_json, video_clip_start_ms, video_clip_end_ms, updated_at_ms)
+             VALUES (?1,?2,?3,?4,?5,?6)
              ON CONFLICT(id) DO UPDATE SET
                kind=excluded.kind, payload_json=excluded.payload_json,
+               video_clip_start_ms=excluded.video_clip_start_ms,
+               video_clip_end_ms=excluded.video_clip_end_ms,
                updated_at_ms=excluded.updated_at_ms",
-            params![id, kind, payload_json, now_ms()],
+            params![
+                id,
+                kind,
+                payload_json,
+                video_clip_start_ms,
+                video_clip_end_ms,
+                now_ms()
+            ],
         )?;
         Ok(())
+    }
+
+    pub fn get_study_with_clip(&self, id: &str) -> Result<Option<StudyRecord>, StoreError> {
+        let row = self
+            .conn
+            .query_row(
+                "SELECT id, kind, payload_json, updated_at_ms,
+                        video_clip_start_ms, video_clip_end_ms
+                 FROM study_data WHERE id=?1",
+                params![id],
+                |r| {
+                    Ok(StudyRecord {
+                        id: r.get(0)?,
+                        kind: r.get(1)?,
+                        payload_json: r.get(2)?,
+                        updated_at_ms: r.get(3)?,
+                        video_clip_start_ms: r.get(4)?,
+                        video_clip_end_ms: r.get(5)?,
+                    })
+                },
+            )
+            .optional()?;
+        Ok(row)
+    }
+
+    pub fn put_word_status(&self, row: &WordStatusRow) -> Result<(), StoreError> {
+        self.conn.execute(
+            "INSERT INTO word_status (surface, status, encounters, updated_at_ms)
+             VALUES (?1,?2,?3,?4)
+             ON CONFLICT(surface) DO UPDATE SET
+               status=excluded.status,
+               encounters=excluded.encounters,
+               updated_at_ms=excluded.updated_at_ms",
+            params![row.surface, row.status, row.encounters, row.updated_at_ms],
+        )?;
+        Ok(())
+    }
+
+    pub fn list_word_status(&self) -> Result<Vec<WordStatusRow>, StoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT surface, status, encounters, updated_at_ms
+             FROM word_status ORDER BY updated_at_ms DESC",
+        )?;
+        let rows = stmt
+            .query_map([], |r| {
+                Ok(WordStatusRow {
+                    surface: r.get(0)?,
+                    status: r.get(1)?,
+                    encounters: r.get(2)?,
+                    updated_at_ms: r.get(3)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    pub fn word_status_histogram(&self) -> Result<Vec<(String, i64)>, StoreError> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT status, COUNT(*) FROM word_status GROUP BY status")?;
+        let rows = stmt
+            .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?)))?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(rows)
     }
 
     pub fn get_translation(
@@ -580,7 +692,9 @@ impl SqliteStore {
         let row = self
             .conn
             .query_row(
-                "SELECT id, kind, payload_json, updated_at_ms FROM study_data WHERE id=?1",
+                "SELECT id, kind, payload_json, updated_at_ms,
+                        video_clip_start_ms, video_clip_end_ms
+                 FROM study_data WHERE id=?1",
                 params![id],
                 |r| {
                     Ok(StudyRecord {
@@ -588,6 +702,8 @@ impl SqliteStore {
                         kind: r.get(1)?,
                         payload_json: r.get(2)?,
                         updated_at_ms: r.get(3)?,
+                        video_clip_start_ms: r.get(4)?,
+                        video_clip_end_ms: r.get(5)?,
                     })
                 },
             )
@@ -597,7 +713,9 @@ impl SqliteStore {
 
     pub fn list_study_by_kind(&self, kind: &str) -> Result<Vec<StudyRecord>, StoreError> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, kind, payload_json, updated_at_ms FROM study_data WHERE kind=?1 ORDER BY updated_at_ms DESC",
+            "SELECT id, kind, payload_json, updated_at_ms,
+                    video_clip_start_ms, video_clip_end_ms
+             FROM study_data WHERE kind=?1 ORDER BY updated_at_ms DESC",
         )?;
         let rows = stmt
             .query_map(params![kind], |r| {
@@ -606,6 +724,8 @@ impl SqliteStore {
                     kind: r.get(1)?,
                     payload_json: r.get(2)?,
                     updated_at_ms: r.get(3)?,
+                    video_clip_start_ms: r.get(4)?,
+                    video_clip_end_ms: r.get(5)?,
                 })
             })?
             .collect::<Result<Vec<_>, _>>()?;
@@ -953,9 +1073,12 @@ mod tests {
             store.get_page_segment(&page_key).unwrap().as_deref(),
             Some("こんにちは")
         );
-        store.put_study("card1", "fsrs", r#"{"due":1}"#).unwrap();
+        store
+            .put_study("card1", "fsrs", r#"{"due":1}"#, None, None)
+            .unwrap();
         let study = store.get_study("card1").unwrap().unwrap();
         assert_eq!(study.kind, "fsrs");
+        assert_eq!(study.video_clip_start_ms, None);
         assert_eq!(store.list_study_by_kind("fsrs").unwrap().len(), 1);
         assert!(store.delete_study("card1").unwrap());
         assert_eq!(store.clear_lyrics_prefix("lyrics|vid|").unwrap(), 1);
@@ -971,7 +1094,9 @@ mod tests {
     fn privacy_wipe_and_dictionary_lookup() {
         let store = SqliteStore::open_in_memory().unwrap();
         store.put_transcript("v1", "h1", r#"{"cues":[]}"#).unwrap();
-        store.put_study("s1", "note", r#"{"x":1}"#).unwrap();
+        store
+            .put_study("s1", "note", r#"{"x":1}"#, None, None)
+            .unwrap();
         let meta = DictionaryMeta {
             id: "dict1".into(),
             name: "Test".into(),

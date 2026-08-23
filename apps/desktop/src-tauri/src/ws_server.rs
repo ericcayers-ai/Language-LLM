@@ -1403,8 +1403,18 @@ async fn handle_study_sync(
             let id = value.get("id").and_then(|v| v.as_str()).unwrap_or("");
             let kind = value.get("kind").and_then(|v| v.as_str()).unwrap_or("card");
             let payload = value.get("payload").cloned().unwrap_or(json!({}));
-            let ok =
-                with_sqlite(state, |db| db.put_study(id, kind, &payload.to_string())).is_some();
+            let clip_start = value
+                .get("videoClipStartMs")
+                .and_then(|v| v.as_i64())
+                .or_else(|| payload.get("videoClipStartMs").and_then(|v| v.as_i64()));
+            let clip_end = value
+                .get("videoClipEndMs")
+                .and_then(|v| v.as_i64())
+                .or_else(|| payload.get("videoClipEndMs").and_then(|v| v.as_i64()));
+            let ok = with_sqlite(state, |db| {
+                db.put_study(id, kind, &payload.to_string(), clip_start, clip_end)
+            })
+            .is_some();
             json!({ "ok": ok, "id": id })
         }
         "get" => {

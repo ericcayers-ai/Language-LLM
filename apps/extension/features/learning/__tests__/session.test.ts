@@ -95,9 +95,14 @@ describe("study session", () => {
     const snap = await store.load();
     expect(snap.cards[0]?.sourceText).toBe("remote");
     expect(snap.knownWords).toContain("hi");
-    await store.save({ cards: snap.cards, knownWords: ["hi", "yo"] });
+    await store.save({
+      cards: snap.cards,
+      knownWords: ["hi", "yo"],
+      wordStatus: snap.wordStatus,
+    });
     expect(putPayload).toMatchObject({ knownWords: ["hi", "yo"] });
     const mirrored = await offline.load();
     expect(mirrored.knownWords).toContain("yo");
+    expect(Array.isArray(mirrored.wordStatus)).toBe(true);
   });
 });

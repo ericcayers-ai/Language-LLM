@@ -2,6 +2,8 @@
  * YouTube SPA navigation detection without polling the whole DOM.
  */
 
+import { predictDifficulty, tokenizeSurfaces } from "@language-llm/learning";
+
 export type YtPageKind = "watch" | "shorts" | "live" | "music" | "other";
 
 export function extractVideoId(href: string): string | null {
@@ -59,4 +61,16 @@ export function subscribeYtNavigation(
     window.removeEventListener("yt-navigate-finish", emit as EventListener);
     window.removeEventListener("popstate", emit);
   };
+}
+
+/**
+ * Score how hard a subtitle is for the learner given their known-word set.
+ * Convenience wrapper around `predictDifficulty` so subtitle renderers can
+ * tag every cue with a 1..10 difficulty badge without re-importing learning.
+ */
+export function subtitleDifficulty(
+  text: string,
+  knownWords: Set<string>,
+): number {
+  return predictDifficulty(knownWords, tokenizeSurfaces(text));
 }

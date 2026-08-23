@@ -42,6 +42,25 @@ export type ModelLicenseClass =
   | "optional"
   | "research-opt-in";
 
+/**
+ * Per-word tracking lifecycle used by sentence mining + SRS review.
+ * Mirrors `WordStatus` in `packages/protocol/rust/src/lib.rs`.
+ */
+export type WordStatus =
+  | "unknown"
+  | "learning"
+  | "known"
+  | "ignored"
+  | "tracked";
+
+/** Per-word status record carried inside a `StudySessionSnapshot`. */
+export interface PerWordStatus {
+  surface: string;
+  status: WordStatus;
+  encounters: number;
+  updatedAtMs: number;
+}
+
 export type JobKind =
   | "asr"
   | "translate"
@@ -270,6 +289,11 @@ export interface StudyCard {
   fsrs: FsrsState;
   createdAtMs: number;
   updatedAtMs: number;
+  /** Optional video clip window anchored to the source cue (ms). */
+  videoClipStartMs?: number;
+  videoClipEndMs?: number;
+  /** Optional per-word status snapshot captured at mine-time. */
+  perWord?: PerWordStatus[];
 }
 
 /** Discriminated WebSocket messages exchanged over loopback. */

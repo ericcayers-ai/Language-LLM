@@ -24,6 +24,8 @@ export interface CaptionOverlayProps extends HTMLAttributes<HTMLDivElement> {
   karaokeActive?: boolean;
   provenance?: CaptionProvenanceLabel | string;
   confidence?: number;
+  /** Per-subtitle difficulty score (1..10) for the active learner. */
+  difficulty?: number;
   fontScale?: number;
   opacity?: number;
   /** Evidence / VLM summary shown beside captions in Balanced/Expert. */
@@ -75,6 +77,7 @@ export function CaptionOverlay({
   karaokeActive = false,
   provenance,
   confidence,
+  difficulty,
   fontScale = 1,
   opacity = 0.92,
   evidenceSlot,
@@ -123,7 +126,7 @@ export function CaptionOverlay({
       style={rootStyle}
       {...rest}
     >
-      {uncertain || provenance || confidence != null ? (
+      {uncertain || provenance || confidence != null || difficulty != null ? (
         <div
           data-llm-chrome="diagnostics"
           style={{
@@ -149,6 +152,11 @@ export function CaptionOverlay({
               aria-label={`Confidence ${Math.round(confidence * 100)} percent`}
             >
               {Math.round(confidence * 100)}%
+            </span>
+          ) : null}
+          {difficulty != null ? (
+            <span aria-label={`Difficulty ${difficulty} of 10`}>
+              difficulty {difficulty}/10
             </span>
           ) : null}
         </div>

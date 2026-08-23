@@ -127,6 +127,7 @@ const pairs = [
   ["ModelLicenseClass", "ModelLicenseClass"],
   ["JobKind", "JobKind"],
   ["JobStatus", "JobStatus"],
+  ["WordStatus", "WordStatus"],
 ];
 
 for (const [tsName, rustName] of pairs) {

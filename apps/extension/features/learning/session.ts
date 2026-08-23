@@ -1,4 +1,4 @@
-import type { StudyCard } from "@language-llm/protocol";
+import type { PerWordStatus, StudyCard, WordStatus } from "@language-llm/protocol";
 import {
   cardsToCsv,
   createKnownWordTracker,
@@ -13,6 +13,7 @@ import {
 export interface StudySessionSnapshot {
   cards: StudyCard[];
   knownWords: string[];
+  wordStatus: PerWordStatus[];
 }
 
 export interface StudySessionStore {
@@ -53,6 +54,7 @@ export function createChromeStudyStore(
       return {
         cards: Array.isArray(data?.cards) ? data.cards : [],
         knownWords: Array.isArray(data?.knownWords) ? data.knownWords : [],
+        wordStatus: Array.isArray(data?.wordStatus) ? data.wordStatus : [],
       };
     },
     async save(snapshot) {
@@ -135,6 +137,9 @@ function extractStudyPayload(result: unknown): StudySessionSnapshot | null {
         knownWords: Array.isArray(payload.knownWords)
           ? payload.knownWords
           : [],
+        wordStatus: Array.isArray(payload.wordStatus)
+          ? payload.wordStatus
+          : [],
       };
     }
   }
@@ -158,6 +163,9 @@ function extractStudyPayload(result: unknown): StudySessionSnapshot | null {
             knownWords: Array.isArray(payload.knownWords)
               ? payload.knownWords
               : [],
+            wordStatus: Array.isArray(payload.wordStatus)
+              ? payload.wordStatus
+              : [],
           };
         }
       }
@@ -174,6 +182,9 @@ function extractStudyPayload(result: unknown): StudySessionSnapshot | null {
               knownWords: Array.isArray(parsed.knownWords)
                 ? parsed.knownWords
                 : [],
+              wordStatus: Array.isArray(parsed.wordStatus)
+                ? parsed.wordStatus
+                : [],
             };
           }
         } catch {
@@ -187,7 +198,7 @@ function extractStudyPayload(result: unknown): StudySessionSnapshot | null {
 
 /** In-memory store for unit tests. */
 export function createMemoryStudyStore(
-  initial: StudySessionSnapshot = { cards: [], knownWords: [] },
+  initial: StudySessionSnapshot = { cards: [], knownWords: [], wordStatus: [] },
 ): StudySessionStore {
   let snap = structuredClone(initial);
   return {
@@ -203,6 +214,7 @@ export function createMemoryStudyStore(
 export class StudySession {
   private cards: StudyCard[] = [];
   private tracker: KnownWordTracker = createKnownWordTracker();
+  private wordStatus: Map<string, PerWordStatus> = new Map();
 
   constructor(private readonly store: StudySessionStore) {}
 
@@ -210,13 +222,35 @@ export class StudySession {
     const snap = await this.store.load();
     this.cards = snap.cards;
     this.tracker = createKnownWordTracker(snap.knownWords);
+    this.wordStatus = new Map(
+      (snap.wordStatus ?? []).map((w) => [w.surface.toLowerCase(), w]),
+    );
   }
 
   private async persist(): Promise<void> {
     await this.store.save({
       cards: this.cards,
       knownWords: [...this.tracker.known],
+      wordStatus: [...this.wordStatus.values()],
     });
+  }
+
+  private bumpWordStatus(surface: string, now: number): PerWordStatus {
+    const key = surface.toLowerCase();
+    const prev = this.wordStatus.get(key);
+    const status: WordStatus = prev?.status ?? "unknown";
+    const next: PerWordStatus = {
+      surface,
+      status,
+      encounters: (prev?.encounters ?? 0) + 1,
+      updatedAtMs: now,
+    };
+    this.wordStatus.set(key, next);
+    return next;
+  }
+
+  listWordStatus(): PerWordStatus[] {
+    return [...this.wordStatus.values()];
   }
 
   listCards(): StudyCard[] {
@@ -235,8 +269,11 @@ export class StudySession {
     translationText?: string;
     videoId?: string;
     tags?: string[];
+    videoClipStartMs?: number;
+    videoClipEndMs?: number;
   }): Promise<StudyCard> {
     const id = `mine:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
+    const now = Date.now();
     const card = createStudyCard({
       id,
       sourceText: input.sourceText,
@@ -247,12 +284,23 @@ export class StudySession {
       tags: input.tags ?? ["mined"],
       provenance: "user-edit",
     });
+    const perWord: PerWordStatus[] = [];
     for (const token of tokenizeSurfaces(input.sourceText)) {
       noteEncounter(this.tracker, token);
+      perWord.push(this.bumpWordStatus(token, now));
     }
-    this.cards.push(card);
+    this.cards.push({
+      ...card,
+      ...(input.videoClipStartMs !== undefined
+        ? { videoClipStartMs: input.videoClipStartMs }
+        : {}),
+      ...(input.videoClipEndMs !== undefined
+        ? { videoClipEndMs: input.videoClipEndMs }
+        : {}),
+      ...(perWord.length > 0 ? { perWord } : {}),
+    });
     await this.persist();
-    return card;
+    return this.cards[this.cards.length - 1]!;
   }
 
   async review(cardId: string, rating: 1 | 2 | 3 | 4, now = Date.now()): Promise<StudyCard | null> {
@@ -271,6 +319,15 @@ export class StudySession {
 
   async markSurfaceKnown(surface: string): Promise<void> {
     markKnown(this.tracker, surface);
+    const now = Date.now();
+    const key = surface.toLowerCase();
+    const prev = this.wordStatus.get(key);
+    this.wordStatus.set(key, {
+      surface,
+      status: "known",
+      encounters: prev?.encounters ?? 0,
+      updatedAtMs: now,
+    });
     await this.persist();
   }
 

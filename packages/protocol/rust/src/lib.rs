@@ -63,6 +63,25 @@ pub enum ModelLicenseClass {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
+pub enum WordStatus {
+    Unknown,
+    Learning,
+    Known,
+    Ignored,
+    Tracked,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PerWordStatus {
+    pub surface: String,
+    pub status: WordStatus,
+    pub encounters: u32,
+    pub updated_at_ms: u64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub enum JobKind {
     Asr,
     Translate,
