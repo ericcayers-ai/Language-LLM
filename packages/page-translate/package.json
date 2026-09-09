@@ -16,7 +16,7 @@
     "@language-llm/protocol": "workspace:*"
   },
   "devDependencies": {
-    "happy-dom": "^20.10.6",
+    "happy-dom": "^20.14.0",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   }
